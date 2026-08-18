@@ -1,0 +1,7 @@
+node_modules
+dist
+.DS_Store
+*.local
+
+# Generated from scene.gltf by `npm run pack-model`
+public/models/scene.glb

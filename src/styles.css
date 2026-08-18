@@ -1,0 +1,403 @@
+/* ==========================================================================
+   Tokens
+   Neutrals come straight from the logo artwork, so the type and the mark are
+   the same family of ink. The accent is sampled off the amber point lights in
+   the scene.
+   ========================================================================== */
+
+:root {
+  --bg: #08080a;
+  --ink: #f2f2f3;
+  --ink-body: #cfc6ba;
+  --ink-faint: #a09689;
+  --ink-deep: #1d1f20;
+  --accent: #e8913c;
+
+  --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", system-ui, sans-serif;
+
+  --gutter: clamp(1.5rem, 5vw, 5.5rem);
+  --floor: clamp(4.5rem, 9vh, 7rem);
+
+  /* Layer order: canvas 0, scroll track 1, story 5, chrome 10, loader 20. */
+  --z-story: 5;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* ==========================================================================
+   Stage
+   ========================================================================== */
+
+/* Pinned behind everything. pointer-events:none keeps wheel and touch gestures
+   going to the document so the page still scrolls over the canvas. */
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.stage canvas { display: block; }
+
+.scroll-track {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Story
+   Default state is a plain, fully visible, readable stack. The rAF loop sets
+   data-live and takes over, so a JS failure leaves legible copy behind
+   instead of four invisible sections.
+   ========================================================================== */
+
+.story {
+  position: relative;
+  z-index: var(--z-story);
+}
+
+.story:not([data-live="true"]) .beat { padding: 4rem var(--gutter); }
+
+.story[data-live="true"] {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.story[data-live="true"] .beat {
+  position: absolute;
+  inset: 0;
+  opacity: var(--p, 1);
+}
+
+/* Ink is chosen per beat against what the camera is actually looking at. The
+   opening shot is a sheet of white sketch paper, so that beat is set in the
+   brand's dark ink; the middle beats sit against the dark room and are set
+   light. No scrims: the halo below is enough to hold an edge over pencil
+   marks or a light bloom without laying a gradient across the scene. */
+
+/* Inks are measured against the shades each shot actually contains. Both body
+   values clear 4.5:1 across the realistic range; where the backdrop lands on a
+   mid-tone that favours neither ink, the halo carries the edge. */
+
+.beat[data-tone="dark"] {
+  --beat-ink: var(--ink-deep);
+  --beat-ink-soft: #232627;
+  --beat-halo: 0 1px 26px rgb(255 255 255 / 0.7), 0 1px 4px rgb(255 255 255 / 0.55);
+}
+
+.beat[data-tone="light"] {
+  --beat-ink: var(--ink);
+  --beat-ink-soft: #e6dfd6;
+  --beat-halo: 0 1px 30px rgb(8 8 10 / 0.7), 0 1px 4px rgb(8 8 10 / 0.5);
+}
+
+/* --- Placement -----------------------------------------------------------
+   x / y / w arrive as inline custom properties from story.js, tuned per beat
+   against the composition of that shot. */
+
+.story[data-live="true"] .beat__inner {
+  position: absolute;
+  left: var(--x, 5%);
+  top: var(--y, 58%);
+  width: min(var(--w, 36rem), calc(100% - var(--gutter) * 2));
+}
+
+/* --- Beat motion ---------------------------------------------------------
+   One language across all four: the block drifts into place while its heading
+   assembles word by word behind masks. Amplitude and direction change per beat
+   so the sequence reads as edited rather than looped. --px / --py are the
+   damped pointer parallax, a few pixels of counter-drift that sit the type in
+   the scene instead of on a pane of glass in front of it. */
+
+.beat__inner {
+  --drift: 1.5rem;
+  --shift: translate(0, 0);
+  transform: var(--shift)
+    translate3d(
+      calc(var(--px, 0) * 10px),
+      calc((1 - var(--p, 1)) * var(--drift) + var(--py, 0) * 7px),
+      0
+    );
+}
+
+.beat[data-beat="process"] .beat__inner { --drift: -1.5rem; }
+.beat[data-beat="evidence"] .beat__inner { --drift: 2rem; }
+
+.beat[data-centred="true"] .beat__inner {
+  left: 50%;
+  top: 50%;
+  width: auto;
+  transform: translate(-50%, -50%)
+    translate3d(calc(var(--px, 0) * 8px), calc((1 - var(--p, 1)) * 0.75rem + var(--py, 0) * 5px), 0)
+    scale(calc(0.965 + var(--p, 1) * 0.035));
+}
+
+/* Only composite a blur while a beat is actually in transit. At rest the
+   filter is dropped entirely rather than layering blur(0) over the 3D scene. */
+.story[data-live="true"] .beat[data-moving="true"] .beat__inner {
+  filter: blur(calc((1 - var(--p, 1)) * 4px));
+}
+
+/* ==========================================================================
+   Beat typography
+   ========================================================================== */
+
+.beat__heading {
+  margin: 0;
+  color: var(--beat-ink, var(--ink));
+  font-weight: 700;
+  font-size: clamp(1.85rem, 3.9vw, 2.875rem);
+  line-height: 0.94;
+  letter-spacing: -0.018em;
+  text-shadow: var(--beat-halo);
+}
+
+.beat[data-beat="hero"] .beat__heading {
+  font-size: clamp(2.75rem, 7vw, 5.25rem);
+  letter-spacing: -0.028em;
+}
+
+.beat__line { display: block; }
+
+/* The mask is per word, not per line, so a heading that wraps on a narrow
+   screen still hides each word inside its own box. The padding gives caps and
+   descenders room inside the clip; the matching negative margin keeps the
+   layout exactly where it was. */
+.beat__word {
+  display: inline-block;
+  /* overflow:hidden moves an inline-block's baseline to its bottom margin
+     edge, which would quietly reintroduce leading between the heading lines.
+     Aligning to the top takes the baseline out of the equation entirely. */
+  vertical-align: top;
+  overflow: hidden;
+  padding: 0.14em 0 0.18em;
+  margin: -0.14em 0 -0.18em;
+}
+
+.beat__word-inner {
+  display: block;
+  transform: translate3d(0, calc((1 - var(--wp, 1)) * 140%), 0);
+}
+
+/* Body copy trails the heading slightly: --bp is the same presence value,
+   delayed, so the sentence lands just after the headline has assembled. */
+.beat__body {
+  margin: 1.1rem 0 0;
+  max-width: 52ch;
+  color: var(--beat-ink-soft, var(--ink-body));
+  font-size: clamp(1.0625rem, 1.15vw, 1.25rem);
+  font-weight: 500;
+  line-height: 1.32;
+  letter-spacing: 0.008em;
+  text-shadow: var(--beat-halo);
+  text-wrap: pretty;
+  opacity: var(--bp, 1);
+  transform: translate3d(0, calc((1 - var(--bp, 1)) * 0.9rem), 0);
+}
+
+.beat[data-beat="hero"] .beat__body {
+  max-width: 42ch;
+  font-size: clamp(1.125rem, 1.35vw, 1.4rem);
+}
+
+.beat__logo {
+  display: block;
+  width: min(58vw, 27rem);
+  height: auto;
+}
+
+/* ==========================================================================
+   Chrome
+   ========================================================================== */
+
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: var(--bg);
+  transition: opacity 500ms ease;
+}
+
+.loader--done { opacity: 0; pointer-events: none; }
+
+.loader__label {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.loader__track {
+  width: min(320px, 60vw);
+  height: 2px;
+  overflow: hidden;
+  background: rgb(242 242 243 / 0.14);
+}
+
+.loader__bar {
+  width: 100%;
+  height: 100%;
+  background: var(--ink);
+  transform-origin: left;
+  transform: scaleX(0);
+  transition: transform 200ms ease;
+}
+
+.loader__bar--indeterminate {
+  transform: scaleX(0.3);
+  animation: slide 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes slide {
+  0%   { transform: translateX(-100%) scaleX(0.3); }
+  100% { transform: translateX(333%) scaleX(0.3); }
+}
+
+.loader__hint { margin: 0; font-size: 0.9375rem; color: var(--ink-body); }
+
+.loader__item {
+  margin: 0;
+  max-width: 70vw;
+  overflow: hidden;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+/* Amber reads against both ends of this scene: the white sketch paper it opens
+   on and the dark room it travels through. */
+.scrubber {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  width: 100%;
+  height: 3px;
+  background: rgb(29 31 32 / 0.18);
+  pointer-events: none;
+}
+
+.scrubber__fill {
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+
+/* --- Scroll cue ----------------------------------------------------------
+   Set in dark ink, because the only thing it ever has to compete with is the
+   white sketch paper of the opening shot. */
+
+.scroll-cue {
+  position: fixed;
+  bottom: 1.75rem;
+  left: 50%;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  transform: translateX(-50%);
+  transition: opacity 450ms ease;
+  pointer-events: none;
+}
+
+.scroll-cue__label {
+  color: var(--ink-deep);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: 0.36em;
+  text-indent: 0.36em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 18px rgb(255 255 255 / 0.7);
+}
+
+.scroll-cue__track {
+  position: relative;
+  width: 2px;
+  height: 4rem;
+  overflow: hidden;
+  background: rgb(29 31 32 / 0.2);
+}
+
+.scroll-cue__spark {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 42%;
+  background: var(--ink-deep);
+  animation: cue 1.9s cubic-bezier(0.7, 0, 0.3, 1) infinite;
+}
+
+@keyframes cue {
+  0%        { transform: translateY(-110%); }
+  55%, 100% { transform: translateY(240%); }
+}
+
+/* ==========================================================================
+   Responsive + motion preferences
+   ========================================================================== */
+
+@media (max-width: 40rem) {
+  /* One column anchored low, where a thumb is not covering it and the scene
+     still has room to breathe. The per-beat placement is desktop composition;
+     on a phone there is only one sensible place for it. */
+  .story[data-live="true"] .beat__inner {
+    left: var(--gutter);
+    right: var(--gutter);
+    top: auto;
+    bottom: var(--floor);
+    width: auto;
+  }
+
+  .beat[data-centred="true"] .beat__inner {
+    left: 50%;
+    right: auto;
+    top: 50%;
+    bottom: auto;
+    width: auto;
+  }
+
+  .beat__body { max-width: none; }
+  .beat__logo { width: 72vw; }
+  .scroll-cue__track { height: 2.75rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The crossfade stays, because it is how the story is told. The travel does not. */
+  .beat__inner,
+  .beat[data-centred="true"] .beat__inner,
+  .beat__word-inner,
+  .beat__body {
+    transform: none !important;
+    filter: none !important;
+  }
+
+  .loader__bar--indeterminate,
+  .scroll-cue__spark { animation: none; }
+
+  .scroll-cue__spark { transform: translateY(120%); }
+}
