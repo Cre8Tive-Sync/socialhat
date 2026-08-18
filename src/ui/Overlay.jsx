@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useProgress } from '@react-three/drei'
+import { MODEL_MB } from '../config'
 
 /** Full-bleed loading curtain, shown until the glTF and its textures resolve. */
 export function Loader() {
@@ -24,7 +25,11 @@ export function Loader() {
         />
       </div>
       <p className="loader__hint">
-        {progress > 0 ? `${Math.round(progress)}%` : 'streaming 60MB model'}
+        {progress > 0
+          ? `${Math.round(progress)}%`
+          : MODEL_MB
+            ? `streaming ${MODEL_MB}MB model`
+            : 'streaming model'}
       </p>
       <p className="loader__item">{item}</p>
     </div>

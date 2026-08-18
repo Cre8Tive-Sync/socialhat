@@ -15,6 +15,17 @@ export const MODEL_URL = `${import.meta.env.BASE_URL}models/scene.glb`
  */
 export const DRACO_DECODER_PATH = `${import.meta.env.BASE_URL}draco/`
 
+/**
+ * Size of the model in whole MB, measured by vite.config.js at build time.
+ *
+ * Shown on the loading curtain before the first progress event arrives, which
+ * is the one moment a visitor is staring at a bar that has not moved yet. It is
+ * derived rather than typed because the last hand-written figure went stale
+ * silently. 0 means the .glb was missing at build time — the curtain then just
+ * says it is loading, rather than claiming a size it does not know.
+ */
+export const MODEL_MB = __MODEL_MB__
+
 /** How many viewport-heights of scrolling the pinned hero occupies. */
 export const SCROLL_PAGES = 6
 
