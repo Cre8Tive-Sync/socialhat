@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SocialHat — We build brands from the ground up</title>
+<meta name="description" content="SocialHat is a Perth marketing agency. Strategy, content and campaigns built to last." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* ---- core palette ---- */
+    --navy:#1d2d3d;        /* Site Navy  — the one dark field */
+    --steel-deep:#416180;  /* Steel Deep — body-size text in colour, links */
+    --steel:#5980a6;       /* Steel      — rules, marks, button fill, large type */
+    --sky:#b5d9fd;         /* Sky        — tints, annotation on navy */
+    --paper:#f2f2f3;       /* Paper      — the ground */
+    --ink:#1d1f20;         /* Ink        — all type on Paper */
+
+    /* ---- accent ramp ---- */
+    --a200:#dcecff; --a300:#b5d9fd; --a400:#87aed6; --a500:#5980a6;
+    --a600:#4d7193; --a700:#416180; --a800:#31485f; --a900:#1d2d3d;
+
+    /* ---- neutrals ---- */
+    --n100:#f5f5f8; --n200:#e9e9ea; --n300:#d9d9dc;
+    --n500:#8a8a8f; --n600:#6d6d72; --n700:#545457;
+
+    /* rules and marks are always Steel, only the weight varies */
+    --rule:rgba(89,128,166,.34);
+    --rule-soft:rgba(89,128,166,.18);
+
+    --cond:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+    --body:"Barlow","Helvetica Neue",Arial,sans-serif;
+
+    /* stage field — flat, never a gradient; driven navy -> paper by scroll */
+    --stage:#1d2d3d;
+
+    /* overlay UI — crossfades from Paper-on-navy to Ink-on-paper */
+    --ui-ink:var(--ink);
+    --ui-muted:var(--steel-deep);
+    --ui-dim:var(--n500);
+    --ui-accent:var(--steel);
+    --ui-line:rgba(89,128,166,.34);
+    --ui-cta-border:rgba(89,128,166,.34);
+    --ui-cta-bg:transparent;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--body);
+    font-size:15px;
+    line-height:1.6;
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none}
+
+  /* ---------- type scale ----------
+     Condensed shouts, regular explains. Nothing in between. */
+  h1,h2,h3,.display{
+    font-family:var(--cond);font-weight:600;text-transform:uppercase;
+  }
+  .display{font-size:clamp(56px,7.4vw,96px);letter-spacing:-.02em;line-height:.90}
+  h1{font-size:clamp(40px,5.6vw,76px);letter-spacing:-.02em;line-height:.94}
+  h2{font-size:clamp(28px,4vw,40px);line-height:1.0}
+  h3{font-size:clamp(22px,2.2vw,26px);line-height:1.05}
+
+  /* Label — kickers, nav, tags */
+  .lbl,
+  .navlinks a, .nav-cta, .dim span, .svc .tag, .socials a{
+    font-family:var(--cond);font-weight:600;font-size:13px;
+    text-transform:uppercase;letter-spacing:.14em;line-height:1.2;
+  }
+  /* Micro label — all micrographic annotation */
+  .mlbl,
+  .hint, .b-tag, .b-eyebrow, .contact .info .item .k, form.msg .field label,
+  form.msg .sent, .signage .aside, .foot .tag, .foot .cr{
+    font-family:var(--cond);font-weight:600;font-size:11px;
+    text-transform:uppercase;letter-spacing:.17em;line-height:1.3;
+  }
+  /* every counter, code and timecode */
+  .num{font-family:var(--cond);font-variant-numeric:tabular-nums;font-weight:600}
+
+  .lead{font-size:17px;line-height:1.55}
+  .small{font-size:13.5px;line-height:1.5}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:fixed;top:0;left:0;right:0;z-index:40;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px clamp(18px,4vw,48px);
+  }
+  /* wordmark is never set in Barlow */
+  .brand{
+    display:flex;align-items:center;gap:10px;color:var(--ui-ink);
+    font-family:var(--cond);font-weight:600;font-size:23px;
+    text-transform:uppercase;letter-spacing:.02em;line-height:1;
+  }
+  .brand .mark{
+    width:22px;height:22px;border:1.5px solid var(--ui-accent);
+    position:relative;transform:rotate(45deg);border-radius:3px;
+  }
+  .brand .mark::after{
+    content:"";position:absolute;inset:4px;border:1.5px solid var(--ui-accent);border-radius:1px;
+  }
+  .navlinks{display:flex;gap:26px;color:var(--ui-muted)}
+  .navlinks a:hover{color:var(--ui-ink)}
+  .nav-cta{
+    padding:10px 16px;border:1px solid var(--ui-cta-border);
+    border-radius:999px;color:var(--ui-ink);background:var(--ui-cta-bg);
+  }
+  .nav-cta:hover{border-color:var(--ui-accent);color:var(--ui-accent)}
+  @media(max-width:820px){.navlinks{display:none}}
+
+  /* ---------- construction stage ---------- */
+  /* 440vh = 340vh of build scroll, with a snap stop every stage */
+  #construction{height:440vh;position:relative}
+  .snapstop{position:absolute;left:0;width:1px;height:1px;pointer-events:none}
+  .stage{
+    position:sticky;top:0;height:100vh;overflow:hidden;
+    background:var(--stage);          /* flat field — no gradients anywhere */
+  }
+  #scene{display:block;width:100%;height:100%;background:transparent}
+
+  .stage-ui{position:absolute;inset:0;pointer-events:none}
+
+  .readout{
+    position:absolute;left:clamp(18px,4vw,48px);bottom:34px;color:var(--ui-muted);
+  }
+  .readout .bar{width:180px;max-width:40vw;height:2px;background:var(--ui-line);margin-top:10px;position:relative;opacity:.5}
+  .readout .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--ui-accent);width:0%}
+  .readout #pct{font-variant-numeric:tabular-nums}
+
+  .hint{
+    position:absolute;left:50%;bottom:30px;transform:translateX(-50%);
+    color:var(--ui-muted);letter-spacing:.2em;
+  }
+  .hint .arrow{display:block;text-align:center;margin-top:8px;animation:bob 1.6s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(6px);opacity:1}}
+
+  /* ---------- handover bento (light glass, lands beside the finished tower) ---------- */
+  .bento{
+    position:absolute;left:clamp(18px,5vw,72px);bottom:clamp(88px,12vh,120px);
+    width:min(620px,48vw);height:min(510px,calc(100vh - 240px));
+    display:grid;gap:clamp(9px,.9vw,14px);pointer-events:none;
+    grid-template-columns:repeat(3,1fr);
+    grid-template-rows:1.75fr .8fr .8fr;
+    grid-template-areas:
+      "hero hero hero"
+      "stat sign sign"
+      "svc  svc  proof";
+  }
+  .bcard{
+    position:relative;overflow:hidden;min-width:0;min-height:0;pointer-events:auto;opacity:0;
+    display:flex;flex-direction:column;padding:clamp(13px,1.4vw,20px);
+    border-radius:16px;border:1px solid var(--rule-soft);
+    background:rgba(242,242,243,.7);          /* flat Paper, held off the render by blur */
+    -webkit-backdrop-filter:blur(18px);
+    backdrop-filter:blur(18px);
+    box-shadow:0 22px 50px rgba(29,45,61,.10), 0 2px 5px rgba(29,45,61,.05);
+    color:var(--ink);
+    transition:border-color .25s ease,background .25s ease,box-shadow .25s ease;
+  }
+  a.bcard:hover{
+    background:rgba(242,242,243,.9);
+    border-color:var(--rule);
+    box-shadow:0 26px 56px rgba(29,45,61,.15);
+  }
+  .b-hero{grid-area:hero;justify-content:space-between;padding:clamp(17px,1.9vw,26px)}
+  .b-stat{grid-area:stat}
+  .b-sign{grid-area:sign}
+  .b-svc{grid-area:svc}
+  .b-proof{grid-area:proof}
+
+  .b-tag{color:var(--n600);display:flex;gap:6px;flex:0 0 auto}
+  a.bcard .b-tag{padding-right:22px}   /* clear of the corner arrow */
+  .b-go{
+    position:absolute;right:clamp(12px,1.4vw,18px);top:clamp(11px,1.35vw,17px);
+    font-size:14px;color:var(--n500);transition:color .2s ease,transform .2s ease;
+  }
+  a.bcard:hover .b-go{color:var(--steel);transform:translate(2px,-2px)}
+
+  .b-eyebrow{color:var(--steel-deep)}
+  .b-hero h1{font-size:clamp(28px,3.3vw,52px);line-height:.92;letter-spacing:-.02em}
+  .b-hero h1 em{font-style:normal;color:var(--steel)}
+  .b-hero p{margin-top:12px;font-size:15px;line-height:1.6;color:var(--n700);max-width:42ch}
+  .b-cta{display:flex;gap:9px;flex-wrap:wrap}
+  .b-cta .btn{padding:11px 20px}
+  .btn-glass{border-color:var(--rule);color:var(--ink);background:transparent}
+  .btn-glass:hover{border-color:var(--steel);color:var(--steel-deep)}
+
+  .b-num{
+    margin-top:auto;font-family:var(--cond);font-weight:600;font-variant-numeric:tabular-nums;
+    font-size:clamp(32px,3.2vw,48px);line-height:.88;letter-spacing:-.02em;
+  }
+  .b-num span{color:var(--steel)}
+  .b-lab{margin-top:6px;font-size:12.5px;line-height:1.3;color:var(--n700)}
+
+  .b-title{margin-top:auto;font-family:var(--cond);font-weight:600;text-transform:uppercase;
+    font-size:clamp(16px,1.5vw,26px);line-height:1.05}
+
+  .b-chips{margin-top:auto;display:flex;flex-wrap:wrap;gap:5px}
+  .b-chips span{
+    font-family:var(--cond);font-weight:600;text-transform:uppercase;letter-spacing:.12em;
+    font-size:12px;padding:5px 10px;border-radius:999px;
+    border:1px solid var(--rule-soft);color:var(--steel-deep);
+  }
+  .b-names{margin-top:auto;font-size:13.5px;line-height:1.45;color:var(--n700)}
+
+  @media(max-width:900px){
+    .bento{
+      left:18px;right:18px;width:auto;bottom:96px;
+      height:min(400px,calc(100vh - 320px));
+      grid-template-columns:repeat(3,1fr);
+      grid-template-rows:1.9fr .85fr;
+      grid-template-areas:
+        "hero hero hero"
+        "stat sign sign";
+    }
+    .b-svc,.b-proof{display:none}
+    .b-hero h1{font-size:clamp(28px,7.6vw,38px)}
+    .b-tag{letter-spacing:.14em;font-size:10px;white-space:nowrap}
+    .phase-tag{display:none}
+  }
+
+  .phase-tag{
+    position:absolute;right:clamp(18px,4vw,48px);top:50%;transform:translateY(-50%);
+    color:var(--ui-dim);
+    writing-mode:vertical-rl;text-orientation:mixed;
+  }
+
+  .btn{
+    font-family:var(--cond);font-weight:600;font-size:14px;
+    text-transform:uppercase;letter-spacing:.14em;
+    padding:14px 24px;border-radius:999px;cursor:pointer;
+    transition:transform .15s ease, background .2s ease, border-color .2s ease, color .2s ease;
+    border:1px solid transparent;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--steel);color:var(--paper)}
+  .btn-primary:hover{background:var(--steel-deep)}
+  .btn-ghost{border-color:var(--rule);color:var(--ink);background:transparent}
+  .btn-ghost:hover{border-color:var(--steel);color:var(--steel-deep)}
+
+  /* ---------- site content ---------- */
+  #site{
+    position:relative;z-index:5;
+    background:var(--paper);
+    border-top:1px solid var(--rule);
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 clamp(18px,5vw,48px)}
+  section{padding:clamp(72px,11vh,140px) 0}
+
+  .dim{display:flex;align-items:center;gap:18px;margin-bottom:44px}
+  .dim::before,.dim::after{content:"";height:1px;background:var(--rule);flex:1}
+  .dim::before{max-width:26px;flex:0 0 26px;position:relative}
+  .dim span{color:var(--steel-deep);white-space:nowrap}
+  .dim b{color:var(--steel);font-weight:600}
+
+  .thesis h2{max-width:30ch}
+  .thesis h2 em{font-style:normal;color:var(--steel)}
+  .thesis p{margin-top:24px;color:var(--n700);font-size:17px;max-width:60ch;line-height:1.55}
+
+  .svc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft)}
+  .svc{
+    background:var(--paper);padding:34px clamp(22px,3vw,40px);
+    position:relative;transition:background .25s ease;
+  }
+  .svc:hover{background:var(--n200)}
+  .svc .tag{color:var(--n500)}
+  .svc h3{margin-top:16px}
+  .svc p{color:var(--n700);margin-top:10px;font-size:15px;line-height:1.6;max-width:40ch}
+  .svc .go{
+    position:absolute;right:clamp(22px,3vw,40px);top:34px;color:var(--n500);
+    font-size:20px;transition:color .2s ease, transform .2s ease;
+  }
+  .svc:hover .go{color:var(--steel);transform:translate(3px,-3px)}
+  .svc.wide{grid-column:1 / -1}
+  @media(max-width:720px){.svc-grid{grid-template-columns:1fr}.svc.wide{grid-column:auto}}
+
+  .exp{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(30px,6vw,80px);align-items:center}
+  .exp .big{
+    font-family:var(--cond);font-weight:600;font-variant-numeric:tabular-nums;
+    font-size:clamp(72px,12vw,150px);line-height:.90;letter-spacing:-.02em;color:var(--ink);
+  }
+  .exp .big span{color:var(--steel)}
+  .exp .lead{color:var(--n700);font-size:17px;line-height:1.55;margin-top:6px}
+  .exp .lead b{color:var(--ink);font-weight:600}
+  @media(max-width:720px){.exp{grid-template-columns:1fr;gap:24px}}
+
+  .clients{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--rule-soft)}
+  .clients div{
+    padding:20px 6px;border-bottom:1px solid var(--rule-soft);border-right:1px solid var(--rule-soft);
+    font-size:13.5px;line-height:1.5;color:var(--n700);
+    display:flex;align-items:center;gap:10px;
+  }
+  .clients div::before{content:"\25C7";color:var(--steel);font-size:11px}
+  .clients div:nth-child(3n){border-right:none}
+  @media(max-width:720px){.clients{grid-template-columns:repeat(2,1fr)}.clients div:nth-child(3n){border-right:1px solid var(--rule-soft)}.clients div:nth-child(2n){border-right:none}}
+
+  .signage{
+    border:1px solid var(--rule-soft);border-radius:6px;overflow:hidden;
+    display:grid;grid-template-columns:1.4fr 1fr;background:var(--paper);
+  }
+  .signage .body{padding:clamp(32px,4vw,56px)}
+  .signage h3{font-size:clamp(26px,3.2vw,40px);line-height:1.0}
+  .signage p{color:var(--n700);margin-top:16px;font-size:17px;line-height:1.55;max-width:46ch}
+  .signage .opts{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}
+  .signage .aside{
+    border-left:1px solid var(--rule-soft);padding:clamp(28px,3vw,44px);
+    display:flex;flex-direction:column;justify-content:center;gap:14px;color:var(--n600);
+  }
+  .signage .aside .row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed var(--rule-soft);padding-bottom:10px}
+  .signage .aside .row b{color:var(--steel-deep);font-weight:600}
+  @media(max-width:720px){.signage{grid-template-columns:1fr}.signage .aside{border-left:none;border-top:1px solid var(--rule-soft)}}
+
+  .contact{display:grid;grid-template-columns:1fr 1fr;gap:clamp(30px,6vw,72px)}
+  .contact .info{margin-top:28px;display:flex;flex-direction:column;gap:20px}
+  .contact .info .item .k{color:var(--n500)}
+  .contact .info .item .v{font-size:17px;margin-top:5px}
+  .contact .info .item .v a:hover{color:var(--steel-deep)}
+  .socials{display:flex;gap:14px;margin-top:8px}
+  .socials a{color:var(--steel-deep);padding:9px 14px;border:1px solid var(--rule-soft);border-radius:999px}
+  .socials a:hover{border-color:var(--steel);color:var(--ink)}
+
+  form.msg{display:flex;flex-direction:column;gap:14px}
+  form.msg .field label{color:var(--n500);display:block;margin-bottom:7px}
+  form.msg input,form.msg textarea{
+    width:100%;background:var(--n100);border:1px solid var(--rule-soft);border-radius:5px;
+    padding:13px 15px;color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6;
+  }
+  form.msg input::placeholder,form.msg textarea::placeholder{color:var(--n500)}
+  form.msg input:focus,form.msg textarea:focus{outline:none;border-color:var(--steel)}
+  form.msg textarea{resize:vertical;min-height:110px}
+  form.msg .sent{color:var(--steel-deep);display:none}
+  @media(max-width:720px){.contact{grid-template-columns:1fr}}
+
+  /* the second — and last — background field */
+  footer{padding:44px 0;background:var(--navy);color:var(--paper)}
+  .foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+  footer .brand{color:var(--paper)}
+  footer .brand .mark,footer .brand .mark::after{border-color:var(--sky)}
+  .foot .tag{color:var(--sky)}
+  .foot .cr{color:var(--a400)}
+
+  .rise{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
+  .rise.in{opacity:1;transform:none}
+
+  .nowebgl{
+    position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;
+    padding:24px;color:var(--n600);font-size:15px;
+  }
+
+  @media(prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .hint .arrow{animation:none}
+    .rise{transition:none;opacity:1;transform:none}
+  }
+</style>
+</head>
+<body>
+  <a id="top"></a>
+
+  <!-- top bar -->
+  <div class="topbar">
+    <a class="brand" href="#top"><span class="mark"></span> SocialHat</a>
+    <nav class="navlinks">
+      <a href="#work">Work</a>
+      <a href="#services">Services</a>
+      <a href="#signage">Signage</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <a class="nav-cta" href="#contact">Get a quote</a>
+  </div>
+
+  <!-- 3D construction stage -->
+  <div id="construction">
+    <!-- snap stops: plan · foundation · frame · facade · complete -->
+    <span class="snapstop" style="top:0" aria-hidden="true"></span>
+    <span class="snapstop" style="top:68vh" aria-hidden="true"></span>
+    <span class="snapstop" style="top:153vh" aria-hidden="true"></span>
+    <span class="snapstop" style="top:245vh" aria-hidden="true"></span>
+    <span class="snapstop" style="top:340vh" aria-hidden="true"></span>
+
+    <div class="stage">
+      <canvas id="scene"></canvas>
+      <div class="nowebgl" id="nowebgl">3D view unavailable on this device — scroll down for the site.</div>
+      <div class="stage-ui">
+        <div class="readout mlbl">
+          <span id="phaseLabel">BLUEPRINT · PLAN VIEW</span>
+          <div class="bar"><i id="barFill"></i></div>
+          <div id="pct" style="margin-top:8px">BUILD 00%</div>
+        </div>
+        <div class="phase-tag mlbl">SITE 01 · SOCIALHAT HQ</div>
+        <div class="hint" id="hint">Scroll to build<span class="arrow">&#8595;</span></div>
+
+        <!-- handover bento: glass panel that lands once the build tops out -->
+        <div class="bento" id="bento">
+          <article class="bcard b-hero">
+            <div class="b-eyebrow">Perth marketing agency · est. 2015</div>
+            <div class="b-body">
+              <h1>We build brands from the <em>ground up.</em></h1>
+              <p>Strategy, content and campaigns for Perth businesses that want to be seen — and remembered.</p>
+            </div>
+            <div class="b-cta">
+              <a class="btn btn-primary" href="#contact">Start your build</a>
+              <a class="btn btn-glass" href="#work">See recent work</a>
+            </div>
+          </article>
+
+          <div class="bcard b-stat">
+            <div class="b-tag">Track record</div>
+            <div class="b-num">15<span>+</span></div>
+            <div class="b-lab">Years building Perth brands</div>
+          </div>
+
+          <a class="bcard b-sign" href="#signage">
+            <div class="b-tag">Signage</div>
+            <span class="b-go">&#8599;</span>
+            <div class="b-title">Screens across Perth</div>
+          </a>
+
+          <a class="bcard b-svc" href="#services">
+            <div class="b-tag"><span>Services</span><span>· 05</span></div>
+            <span class="b-go">&#8599;</span>
+            <div class="b-chips">
+              <span>Web</span><span>Advertising</span><span>Content</span><span>Social</span><span>Signage</span>
+            </div>
+          </a>
+
+          <div class="bcard b-proof">
+            <div class="b-tag">Trusted by</div>
+            <div class="b-names">Curtin · Sandvik · Wesfarmers · Dept. of Communities</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- site content -->
+  <main id="site">
+    <div class="wrap">
+
+      <section class="thesis rise" id="work">
+        <div class="dim"><span>Marketing · <b>built to last</b></span></div>
+        <h2>Great marketing is <em>engineering.</em> We plan the structure, lay the foundation, and build campaigns that hold up.</h2>
+        <p>For over fifteen years we've helped Perth businesses grow with content that stops the scroll and advertising that actually brings in work. No fluff — just the framework, done properly.</p>
+      </section>
+
+      <section class="rise" id="services">
+        <div class="dim"><span>Services ── schedule / <b>05 items</b></span></div>
+        <div class="svc-grid">
+          <div class="svc">
+            <div class="tag">SVC-01</div><div class="go">&#8599;</div>
+            <h3>Web Development</h3>
+            <p>Websites that convert, not just decorate. New builds or a refit of what you've got.</p>
+          </div>
+          <div class="svc">
+            <div class="tag">SVC-02</div><div class="go">&#8599;</div>
+            <h3>Advertising Campaigns</h3>
+            <p>Leads on tap across Google and Meta, so you never worry about where the next job comes from.</p>
+          </div>
+          <div class="svc">
+            <div class="tag">SVC-03</div><div class="go">&#8599;</div>
+            <h3>Content Creation</h3>
+            <p>World-class video and visuals that put you on the map and stop the scroll.</p>
+          </div>
+          <div class="svc">
+            <div class="tag">SVC-04</div><div class="go">&#8599;</div>
+            <h3>Social Media</h3>
+            <p>Grow your following and keep your audience engaged across every platform.</p>
+          </div>
+          <div class="svc wide">
+            <div class="tag">SVC-05</div><div class="go">&#8599;</div>
+            <h3>Digital Signage</h3>
+            <p>Reach people in the real world, in real time — traditional reach with modern targeting.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="exp rise">
+        <div><div class="big">15<span>+</span></div></div>
+        <div>
+          <div class="dim" style="margin-bottom:20px"><span>Track record</span></div>
+          <p class="lead"><b>Years building Perth businesses through content.</b> Trusted by government, mining, education and homegrown brands to deliver work that performs.</p>
+        </div>
+      </section>
+
+      <section class="rise">
+        <div class="dim"><span>Trusted by ── <b>selected clients</b></span></div>
+        <div class="clients">
+          <div>Dept. of Communities</div>
+          <div>Sandvik</div>
+          <div>Mount Gibson</div>
+          <div>Curtin University</div>
+          <div>Monadelphous</div>
+          <div>Georgiou</div>
+          <div>Wesfarmers</div>
+          <div>Summit Homes</div>
+          <div>City of Vincent</div>
+          <div>Dept. of Health</div>
+          <div>Goldroad</div>
+          <div>Pindan</div>
+        </div>
+      </section>
+
+      <section class="rise" id="signage">
+        <div class="signage">
+          <div class="body">
+            <h3>Digital signage that meets people where they are.</h3>
+            <p>Put your message on screens around Perth — or turn your own space into a revenue stream by hosting one.</p>
+            <div class="opts">
+              <a class="btn btn-primary" href="#contact">Advertise with us</a>
+              <a class="btn btn-ghost" href="#contact">Become a host</a>
+            </div>
+          </div>
+          <div class="aside mlbl">
+            <div class="row"><span>Format</span><b>DIGI-SCREEN</b></div>
+            <div class="row"><span>Reach</span><b>REAL-WORLD</b></div>
+            <div class="row"><span>Targeting</span><b>LOCAL</b></div>
+            <div class="row" style="border-bottom:none"><span>Status</span><b>LIVE</b></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="contact rise" id="contact">
+        <div>
+          <div class="dim"><span>Site office ── <b>get in touch</b></span></div>
+          <h2>Not sure where to start?</h2>
+          <div class="info">
+            <div class="item"><div class="k">Email</div><div class="v"><a href="mailto:info@socialhat.com.au">info@socialhat.com.au</a></div></div>
+            <div class="item"><div class="k">Phone</div><div class="v"><a href="tel:0892850811">08 9285 0811</a></div></div>
+            <div class="item"><div class="k">Studio</div><div class="v">41A Kirwan Street, Floreat, WA</div></div>
+            <div class="item">
+              <div class="k">Follow</div>
+              <div class="socials">
+                <a href="https://www.facebook.com/socialhat/" target="_blank" rel="noopener">Facebook</a>
+                <a href="https://www.instagram.com/socialhat.media" target="_blank" rel="noopener">Instagram</a>
+                <a href="https://www.youtube.com/channel/UCCzxGJ2iy8-uyA-4VwaThCA/featured" target="_blank" rel="noopener">YouTube</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <form class="msg" id="msgForm">
+            <div class="field"><label>Name</label><input type="text" required placeholder="Your name" /></div>
+            <div class="field"><label>Email</label><input type="email" required placeholder="you@business.com" /></div>
+            <div class="field"><label>Phone</label><input type="tel" placeholder="Optional" /></div>
+            <div class="field"><label>Message</label><textarea required placeholder="Tell us what you'd like to build."></textarea></div>
+            <button class="btn btn-primary" type="submit" style="align-self:flex-start">Send message</button>
+            <div class="sent" id="sent">Thanks — we'll be in touch shortly.</div>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      <div class="wrap foot">
+        <a class="brand" href="#top"><span class="mark"></span> SocialHat</a>
+        <div class="tag">Image is everything, the message is the key.</div>
+        <div class="cr">© SocialHat 2026 · Floreat, Perth WA</div>
+      </div>
+    </footer>
+  </main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+  function smooth(t){t=clamp(t,0,1);return t*t*(3-2*t);}
+  function reveal(p,start,dur){return smooth((p-start)/dur);}
+  function lerp(a,b,t){return a+(b-a)*t;}
+
+  var canvas = document.getElementById("scene");
+  var noweb  = document.getElementById("nowebgl");
+  var root   = document.documentElement;
+
+  /* ---------- palette ----------
+     The stage field is flat and moves along the accent ramp: Site Navy 900
+     -> Accent 400 -> Paper. Never a gradient, always one colour at a time. */
+  var FIELD = [[29,45,61],[135,174,214],[242,242,243]];   /* a900 · a400 · Paper */
+  /* overlay UI: [on Site Navy, on Paper] */
+  var UI_INK = [[242,242,243],[29,31,32]];      /* Paper      -> Ink        */
+  var UI_MUT = [[181,217,253],[65,97,128]];     /* Sky        -> Steel Deep */
+  var UI_DIM = [[135,174,214],[138,138,143]];   /* Accent 400 -> Neutral500 */
+  var UI_ACC = [[181,217,253],[89,128,166]];    /* Sky        -> Steel      */
+  var UI_LIN = [[181,217,253],[89,128,166]];
+
+  function mix(a,b,t){
+    return [Math.round(lerp(a[0],b[0],t)),Math.round(lerp(a[1],b[1],t)),Math.round(lerp(a[2],b[2],t))];
+  }
+  function rgbs(c){return "rgb("+c[0]+","+c[1]+","+c[2]+")";}
+  function rgbas(c,a){return "rgba("+c[0]+","+c[1]+","+c[2]+","+a+")";}
+
+  var uiKey = "";
+  function paintUI(dawn, built, ui){
+    var key = ((dawn*90)|0)+"/"+((built*90)|0)+"/"+((ui*90)|0);
+    if(key === uiKey) return;
+    uiKey = key;
+    root.style.setProperty("--stage", rgbs(mix(mix(FIELD[0],FIELD[1],dawn),FIELD[2],built)));
+    root.style.setProperty("--ui-ink",    rgbs(mix(UI_INK[0],UI_INK[1],ui)));
+    root.style.setProperty("--ui-muted",  rgbs(mix(UI_MUT[0],UI_MUT[1],ui)));
+    root.style.setProperty("--ui-dim",    rgbs(mix(UI_DIM[0],UI_DIM[1],ui)));
+    root.style.setProperty("--ui-accent", rgbs(mix(UI_ACC[0],UI_ACC[1],ui)));
+    root.style.setProperty("--ui-line",       rgbas(mix(UI_LIN[0],UI_LIN[1],ui), (0.34-0.02*ui).toFixed(2)));
+    root.style.setProperty("--ui-cta-border", rgbas(mix(UI_LIN[0],UI_LIN[1],ui), (0.44-0.20*ui).toFixed(2)));
+    root.style.setProperty("--ui-cta-bg",     rgbas(mix(UI_ACC[0],UI_ACC[1],ui), (0.16-0.08*ui).toFixed(2)));
+  }
+
+  // The empty #top anchor sets the hash but the browser cancels the scroll
+  // after a pixel (other fragments on the page are fine), so drive it here.
+  document.addEventListener("click", function(e){
+    var a = e.target && e.target.closest ? e.target.closest('a[href="#top"]') : null;
+    if(!a) return;
+    e.preventDefault();
+    window.scrollTo(0, 0);          // html{scroll-behavior:smooth} eases it
+  }, true);
+
+  var glOK = (function(){
+    try{
+      var c=document.createElement("canvas");
+      return !!(window.WebGLRenderingContext && (c.getContext("webgl")||c.getContext("experimental-webgl")));
+    }catch(e){return false;}
+  })();
+
+  if(!glOK || typeof THREE==="undefined"){
+    canvas.style.display="none";
+    noweb.style.display="flex";
+    document.getElementById("construction").style.height="100vh";
+    document.getElementById("hint").style.display="none";
+    var fbCards = document.querySelectorAll(".bcard");       // show the bento outright
+    for(var fb=0; fb<fbCards.length; fb++){ fbCards[fb].style.opacity="1"; }
+    paintUI(1,1,1);
+    initSiteReveal();
+    return;
+  }
+
+  paintUI(0,0,0);   // blueprint sky before the first frame renders
+
+  // ---------- three setup ----------
+  // the sky is a CSS gradient behind a transparent canvas, so it can go
+  // deep blueprint blue -> daylight -> soft white without ever blowing out.
+  var scene = new THREE.Scene();
+  // the ground plane is far larger than the fog reach, so it dissolves into
+  // the sky instead of ending on a visible edge
+  scene.fog = new THREE.Fog(0x1d2d3d, 140, 800);
+  function fogTo(dawn, built){
+    // the field is flat, so the fog can match it exactly and the ground
+    // dissolves into the horizon with no seam at all
+    var c = mix(mix(FIELD[0],FIELD[1],dawn),FIELD[2],built);
+    scene.fog.color.setRGB(c[0]/255, c[1]/255, c[2]/255);
+  }
+
+  var camera = new THREE.PerspectiveCamera(50, 1, 0.1, 2000);
+  var renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 1.75));
+  renderer.setClearColor(0x000000, 0);
+
+  var useShadow = window.innerWidth > 900;
+  if(useShadow){
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  }
+
+  var hemi = new THREE.HemisphereLight(0xffffff, 0xcbd8e6, 0.15);
+  scene.add(hemi);
+  var dir = new THREE.DirectionalLight(0xffffff, 0.05);
+  dir.position.set(-78,132,84);
+  if(useShadow){
+    dir.castShadow = true;
+    dir.shadow.mapSize.width = dir.shadow.mapSize.height = 1024;
+    dir.shadow.camera.near = 20;
+    dir.shadow.camera.far  = 340;
+    dir.shadow.camera.left = -115; dir.shadow.camera.right = 115;
+    dir.shadow.camera.top  =  115; dir.shadow.camera.bottom = -115;
+    dir.shadow.bias = -0.0009;
+  }
+  scene.add(dir);
+  var amb = new THREE.AmbientLight(0xdbe8f8, 0.85);
+  scene.add(amb);
+
+  // ---------- procedural concrete (rough texture so the tower reads on white) ----------
+  function concreteTexture(){
+    var S = 256, N = 16;
+    var cv = document.createElement("canvas"); cv.width = cv.height = S;
+    var ctx = cv.getContext("2d");
+    var low = [];
+    for(var i=0;i<N*N;i++) low.push(Math.random());
+    var img = ctx.createImageData(S,S), d = img.data;
+    for(var y=0;y<S;y++){
+      for(var x=0;x<S;x++){
+        var fx = x/S*N, fy = y/S*N;
+        var x0 = Math.floor(fx), y0 = Math.floor(fy);
+        var tx = fx-x0, ty = fy-y0;
+        var x1 = (x0+1)%N, y1 = (y0+1)%N;
+        var a = low[y0*N+x0], b = low[y0*N+x1], c = low[y1*N+x0], e = low[y1*N+x1];
+        var blot = (a+(b-a)*tx) + ((c+(e-c)*tx) - (a+(b-a)*tx))*ty;
+        var v = 214 + (blot-0.5)*30 + (Math.random()-0.5)*24;
+        var k = (y*S+x)*4;
+        d[k] = d[k+1] = d[k+2] = v < 0 ? 0 : (v > 255 ? 255 : v);
+        d[k+3] = 255;
+      }
+    }
+    ctx.putImageData(img,0,0);
+    var t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    return t;
+  }
+  var maxAniso = renderer.capabilities.getMaxAnisotropy();
+  var texCol = concreteTexture();
+  texCol.repeat.set(1,3); texCol.anisotropy = maxAniso;
+  var texSlab = texCol.clone(); texSlab.needsUpdate = true; texSlab.repeat.set(7,5);
+  var texGnd  = texCol.clone(); texGnd.needsUpdate  = true; texGnd.repeat.set(480,480);
+
+  // ---------- building parameters ----------
+  var FLOORS = 8;
+  var FH = 6.5;
+  var W = 42, D = 30;
+  var TOTAL_H = FLOORS*FH;
+  var colX = [-16,0,16];
+  var colZ = [-10,0,10];
+
+  var world = new THREE.Group();
+  scene.add(world);
+
+  // the render is this brand's "footage": duotoned into Steel, never full colour
+  var rebarMat = new THREE.MeshBasicMaterial({color:0xb5d9fd});
+  var edgeMat  = new THREE.LineBasicMaterial({color:0xb5d9fd, transparent:true, opacity:0.9});
+  var colMat   = new THREE.MeshStandardMaterial({
+    color:0xb5d9fd, roughness:0.95, metalness:0.0,
+    map:texCol, bumpMap:texCol, bumpScale:0.035
+  });
+  var slabMat  = new THREE.MeshStandardMaterial({
+    color:0x87aed6, roughness:0.95, metalness:0.0,
+    map:texSlab, bumpMap:texSlab, bumpScale:0.05
+  });
+  var glassMat = new THREE.MeshStandardMaterial({color:0xb5d9fd, roughness:0.25, metalness:0.08, transparent:true, opacity:0.3});
+  var bpMat    = new THREE.LineBasicMaterial({color:0xb5d9fd, transparent:true, opacity:0.0});
+  var bpMat2   = new THREE.LineBasicMaterial({color:0x87aed6, transparent:true, opacity:0.0});
+
+  var animItems = [];
+
+  function baseBox(w,h,d,mat,baseY,shadow){
+    var g = new THREE.BoxGeometry(w,h,d);
+    g.translate(0,h/2,0);
+    var m = new THREE.Mesh(g,mat);
+    m.position.y = baseY;
+    m.scale.y = 0.0001;
+    m.visible = false;
+    if(useShadow && shadow !== false){ m.castShadow = true; m.receiveShadow = true; }
+    return m;
+  }
+
+  // rebars
+  var rIndex=0, nCols = colX.length*colZ.length;
+  for(var xi=0; xi<colX.length; xi++){
+    for(var zi=0; zi<colZ.length; zi++){
+      var rg = new THREE.CylinderGeometry(0.14,0.14,TOTAL_H,6);
+      rg.translate(0,TOTAL_H/2,0);
+      var rb = new THREE.Mesh(rg, rebarMat);
+      rb.position.set(colX[xi],0,colZ[zi]);
+      rb.scale.y=0.0001;
+      rb.visible=false;
+      world.add(rb);
+      var st = 0.14 + 0.12*(rIndex/(nCols-1));
+      animItems.push({mesh:rb, start:st, dur:0.12});
+      rIndex++;
+    }
+  }
+
+  // per floor
+  for(var f=0; f<FLOORS; f++){
+    var baseY = f*FH;
+    var fT = f/(FLOORS-1);
+    var structStart = lerp(0.22,0.56,fT);
+    var facadeStart = lerp(0.52,0.84,fT);
+
+    var boxG = new THREE.BoxGeometry(W, FH, D);
+    boxG.translate(0,FH/2,0);
+    var eg = new THREE.EdgesGeometry(boxG);
+    var frame = new THREE.LineSegments(eg, edgeMat);
+    frame.position.y = baseY;
+    frame.scale.y = 0.0001;
+    frame.visible = false;
+    world.add(frame);
+    animItems.push({mesh:frame, start:structStart, dur:0.10});
+
+    for(var cx=0; cx<colX.length; cx++){
+      for(var cz=0; cz<colZ.length; cz++){
+        var cm = baseBox(1.3, FH, 1.3, colMat, baseY);
+        cm.position.x = colX[cx];
+        cm.position.z = colZ[cz];
+        world.add(cm);
+        animItems.push({mesh:cm, start:structStart+0.03, dur:0.10});
+      }
+    }
+
+    var slab = baseBox(W+1.5, 0.7, D+1.5, slabMat, baseY+FH-0.7);
+    world.add(slab);
+    animItems.push({mesh:slab, start:structStart+0.06, dur:0.08});
+
+    var panelH = FH-0.9;
+    var frontZ = D/2, backZ = -D/2;
+    var segX = [-14,0,14], segZ=[-10,0,10];
+    var pw = 12, pd = 8.5, pt = 0.3;
+    for(var s=0;s<segX.length;s++){
+      var pf = baseBox(pw, panelH, pt, glassMat, baseY+0.5, false); pf.position.set(segX[s],baseY+0.5,frontZ); world.add(pf);
+      animItems.push({mesh:pf, start:facadeStart, dur:0.11});
+      var pb = baseBox(pw, panelH, pt, glassMat, baseY+0.5, false); pb.position.set(segX[s],baseY+0.5,backZ); world.add(pb);
+      animItems.push({mesh:pb, start:facadeStart+0.01, dur:0.11});
+    }
+    for(var s2=0;s2<segZ.length;s2++){
+      var pl = baseBox(pt, panelH, pd, glassMat, baseY+0.5, false); pl.position.set(-W/2,baseY+0.5,segZ[s2]); world.add(pl);
+      animItems.push({mesh:pl, start:facadeStart+0.02, dur:0.11});
+      var pr = baseBox(pt, panelH, pd, glassMat, baseY+0.5, false); pr.position.set(W/2,baseY+0.5,segZ[s2]); world.add(pr);
+      animItems.push({mesh:pr, start:facadeStart+0.03, dur:0.11});
+    }
+  }
+
+  var roof = baseBox(W+1.5, 1.2, D+1.5, slabMat, TOTAL_H);
+  world.add(roof);
+  animItems.push({mesh:roof, start:0.86, dur:0.06});
+
+  // ---------- blueprint: ground floor plan ----------
+  var bpGroup = new THREE.Group();
+  scene.add(bpGroup);
+
+  var Y0 = 0.06;
+  var A = [];   // primary linework (walls, openings, fittings)
+  var B = [];   // annotation (grid axes, dimensions, glazing, hatching)
+
+  function seg(t,x1,z1,x2,z2){ t.push(new THREE.Vector3(x1,Y0,z1), new THREE.Vector3(x2,Y0,z2)); }
+  function rect(t,x1,z1,x2,z2){ seg(t,x1,z1,x2,z1); seg(t,x2,z1,x2,z2); seg(t,x2,z2,x1,z2); seg(t,x1,z2,x1,z1); }
+  function dash(t,x1,z1,x2,z2,d,g){
+    var dx=x2-x1, dz=z2-z1, L=Math.sqrt(dx*dx+dz*dz);
+    if(L<=0) return;
+    var ux=dx/L, uz=dz/L, s=0;
+    while(s<L){ var e=Math.min(s+d,L); seg(t,x1+ux*s,z1+uz*s,x1+ux*e,z1+uz*e); s=e+g; }
+  }
+  function arc(t,cx,cz,r,a0,a1,n){
+    var px=cx+Math.cos(a0)*r, pz=cz+Math.sin(a0)*r;
+    for(var i=1;i<=n;i++){
+      var a=a0+(a1-a0)*i/n, x=cx+Math.cos(a)*r, z=cz+Math.sin(a)*r;
+      seg(t,px,pz,x,z); px=x; pz=z;
+    }
+  }
+  function circle(t,cx,cz,r){ arc(t,cx,cz,r,0,Math.PI*2,26); }
+  function runX(t,z,a,b,gaps){
+    var cuts=[a], i, j;
+    for(i=0;i<gaps.length;i++) cuts.push(gaps[i][0],gaps[i][1]);
+    cuts.push(b);
+    for(j=0;j<cuts.length;j+=2) if(cuts[j+1]>cuts[j]) seg(t,cuts[j],z,cuts[j+1],z);
+  }
+  function runZ(t,x,a,b,gaps){
+    var cuts=[a], i, j;
+    for(i=0;i<gaps.length;i++) cuts.push(gaps[i][0],gaps[i][1]);
+    cuts.push(b);
+    for(j=0;j<cuts.length;j+=2) if(cuts[j+1]>cuts[j]) seg(t,x,cuts[j],x,cuts[j+1]);
+  }
+  function hatch(t,x1,z1,x2,z2,step){
+    var H=z2-z1;
+    for(var c=x1-H; c<x2; c+=step){
+      var zA=z1+Math.max(0,x1-c), xA=c+(zA-z1);
+      var zB=z1+Math.min(H,x2-c), xB=c+(zB-z1);
+      if(zB>zA && xA<=x2) seg(t,xA,zA,xB,zB);
+    }
+  }
+  // double-line wall with openings; glazing drawn on the wall centreline.
+  // the inner leaf is inset by the wall thickness so corners close cleanly.
+  function wallX(zOut,zIn,a,b,gaps,inset){
+    runX(A,zOut,a,b,gaps); runX(A,zIn,a+inset,b-inset,gaps);
+    var zm=(zOut+zIn)/2;
+    for(var i=0;i<gaps.length;i++){
+      seg(A,gaps[i][0],zOut,gaps[i][0],zIn);
+      seg(A,gaps[i][1],zOut,gaps[i][1],zIn);
+      seg(B,gaps[i][0],zm,gaps[i][1],zm);
+    }
+  }
+  function wallZ(xOut,xIn,a,b,gaps,inset){
+    runZ(A,xOut,a,b,gaps); runZ(A,xIn,a+inset,b-inset,gaps);
+    var xm=(xOut+xIn)/2;
+    for(var i=0;i<gaps.length;i++){
+      seg(A,xOut,gaps[i][0],xIn,gaps[i][0]);
+      seg(A,xOut,gaps[i][1],xIn,gaps[i][1]);
+      seg(B,xm,gaps[i][0],xm,gaps[i][1]);
+    }
+  }
+  // door on a wall running along x: hinge at (hinge,z), closed leaf spans
+  // `span` (signed, along x), opens toward sw (+/-z)
+  function quarter(a0,a1){                      // keep the sweep to 90 degrees
+    if(a1-a0 >  Math.PI) a1 -= Math.PI*2;
+    if(a0-a1 >  Math.PI) a1 += Math.PI*2;
+    return a1;
+  }
+  function doorX(z,hinge,span,sw){
+    var r=Math.abs(span), a0=span>0?0:Math.PI;
+    seg(A,hinge,z,hinge,z+r*sw);
+    arc(B,hinge,z,r, a0, quarter(a0, sw>0?Math.PI/2:-Math.PI/2), 12);
+  }
+  // door on a wall running along z: closed leaf spans `span` (signed, along z),
+  // opens toward sw (+/-x)
+  function doorZ(x,hinge,span,sw){
+    var r=Math.abs(span), a0=sw>0?0:Math.PI;
+    seg(A,x,hinge,x+r*sw,hinge);
+    arc(B,x,hinge,r, a0, quarter(a0, span>0?Math.PI/2:-Math.PI/2), 12);
+  }
+
+  var BX=21, BZ=15;                  // building footprint half-extents
+  var IX=BX-1, IZ=BZ-1;              // inner face of the external wall
+
+  // external walls + windows
+  wallX(-BZ,-IZ, -BX,BX, [[-16.5,-12],[-8,-3.5],[1,5.5],[10,14.5]], 1);
+  wallX( BZ, IZ, -BX,BX, [[-17,-13],[-9.5,-5],[-2,2],[5,9],[13,17]], 1);
+  wallZ(-BX,-IX, -BZ,BZ, [[-11,-7],[-3,1],[5,9]], 1);
+  wallZ( BX, IX, -BZ,BZ, [[-11,-7],[-2,2],[6,10]], 1);
+  // main entrance: double leaf swinging onto the terrace
+  doorX(BZ,-2,2,1); doorX(BZ,2,-2,1);
+
+  // corridor spine
+  runX(A,-2.5,-IX,IX,[[-15,-12.5],[-4.5,-2],[7,9.5]]);
+  runX(A, 2.5,-IX,IX,[[-16,-13.5],[1,3.5],[11,13.5]]);
+  doorX(-2.5,-15,2.5,-1); doorX(-2.5,-4.5,2.5,-1); doorX(-2.5,7,2.5,-1);
+  doorX( 2.5,-16,2.5, 1); doorX( 2.5,1,2.5,1);     doorX( 2.5,11,2.5,1);
+
+  // partitions
+  runZ(A,-9.5,-IZ,-2.5,[]); runZ(A,2.5,-IZ,-2.5,[]); runZ(A,12,-IZ,-2.5,[]);
+  runZ(A,-7, 2.5,IZ,[[6,9]]); runZ(A,8, 2.5,IZ,[]);
+  doorZ(-7,6,3,1);
+
+  // service core: stair + lift
+  rect(A,8,2.5,IX,IZ);
+  for(var tr=9.2; tr<15.6; tr+=1.15) seg(A,tr,3.6,tr,8.6);
+  seg(B,9.2,6.1,15.6,6.1); seg(B,15.6,6.1,14.6,5.4); seg(B,15.6,6.1,14.6,6.8);
+  rect(A,16.6,3.6,19.4,8.6);
+  seg(B,16.6,3.6,19.4,8.6); seg(B,19.4,3.6,16.6,8.6);
+
+  // terrace + hatching
+  rect(A,-BX,BZ,4,19.5);
+  hatch(B,-BX+0.4,BZ+0.4,3.6,19.1,1.7);
+
+  // structural column grid
+  for(var gx=0; gx<colX.length; gx++){
+    for(var gz=0; gz<colZ.length; gz++){
+      var cxp=colX[gx], czp=colZ[gz];
+      rect(A,cxp-0.9,czp-0.9,cxp+0.9,czp+0.9);
+      seg(B,cxp-1.9,czp,cxp+1.9,czp); seg(B,cxp,czp-1.9,cxp,czp+1.9);
+    }
+  }
+  for(var ax=0; ax<colX.length; ax++){
+    dash(B,colX[ax],-20.5,colX[ax],20.5,2.2,1.6);
+    circle(B,colX[ax],-22.3,1.6);
+  }
+  for(var az=0; az<colZ.length; az++){
+    dash(B,-30,colZ[az],30,colZ[az],2.2,1.6);
+    circle(B,-31.8,colZ[az],1.6);
+  }
+
+  // dimension chains
+  function dimX(z,x1,x2,edge){
+    seg(B,x1,z,x2,z);
+    seg(B,x1-0.9,z+0.9,x1+0.9,z-0.9);
+    seg(B,x2-0.9,z+0.9,x2+0.9,z-0.9);
+    seg(B,x1,edge,x1,z+1.2); seg(B,x2,edge,x2,z+1.2);
+  }
+  function dimZ(x,z1,z2,edge){
+    seg(B,x,z1,x,z2);
+    seg(B,x-0.9,z1+0.9,x+0.9,z1-0.9);
+    seg(B,x-0.9,z2+0.9,x+0.9,z2-0.9);
+    seg(B,edge,z1,x-1.2,z1); seg(B,edge,z2,x-1.2,z2);
+  }
+  dimX(22.5,-BX,2.5,19.8); dimX(22.5,2.5,BX,15.4);
+  dimZ(-25,-BZ,-2.5,-BX); dimZ(-25,-2.5,BZ,-BX);
+
+  // north point
+  circle(B,28,-13,2.6);
+  seg(A,28,-9.6,28,-16.6); seg(A,28,-16.6,27.1,-14.9); seg(A,28,-16.6,28.9,-14.9);
+  seg(A,27.2,-18.4,27.2,-21); seg(A,27.2,-21,28.8,-18.4); seg(A,28.8,-18.4,28.8,-21);
+
+  // title block — logo, notes and scale bar, as on a real drawing sheet
+  function diamond(t,cx,cz,r){
+    seg(t,cx,cz-r,cx+r,cz); seg(t,cx+r,cz,cx,cz+r);
+    seg(t,cx,cz+r,cx-r,cz); seg(t,cx-r,cz,cx,cz-r);
+  }
+  rect(A,23,12,36.5,27);
+  seg(A,23,17,36.5,17); seg(A,23,21.5,36.5,21.5);
+  diamond(A,26.5,14.5,2.0); diamond(A,26.5,14.5,1.0);
+  seg(B,30,13.8,35,13.8);   seg(B,30,15.4,33.5,15.4);
+  seg(B,24.2,18.3,35,18.3); seg(B,24.2,19.6,32,19.6); seg(B,24.2,20.9,34,20.9);
+  seg(B,24.2,22.7,30,22.7);
+  seg(A,24.2,25.2,33.2,25.2);
+  for(var sb=0; sb<=3; sb++){ var sx=24.2+sb*3; seg(A,sx,24.6,sx,25.8); }
+  seg(B,24.2,25.8,27.2,25.8); seg(B,30.2,25.8,33.2,25.8);
+
+  // site boundary — kept wide so it frames rather than crowds the plan
+  dash(B,-38,-31,38,-31,3.2,2.2); dash(B,38,-31,38,31,3.2,2.2);
+  dash(B,38,31,-38,31,3.2,2.2);   dash(B,-38,31,-38,-31,3.2,2.2);
+
+  function commit(t,mat){
+    if(!t.length) return;
+    bpGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(t), mat));
+  }
+  commit(A,bpMat); commit(B,bpMat2);
+
+  // graph-paper grid (blueprint) crossfading into a site grid (built)
+  var bpGrid = new THREE.GridHelper(260, 52, 0xb5d9fd, 0x5980a6);
+  bpGrid.material.transparent = true; bpGrid.material.opacity = 0; bpGrid.position.y = -0.02;
+  scene.add(bpGrid);
+
+  var siteGrid = new THREE.GridHelper(260, 52, 0x5980a6, 0x87aed6);
+  siteGrid.material.transparent = true; siteGrid.material.opacity = 0; siteGrid.position.y = 0.01;
+  scene.add(siteGrid);
+
+  var groundMat = new THREE.MeshStandardMaterial({
+    color:0xe9e9ea, roughness:1, metalness:0, transparent:true, opacity:0, map:texGnd
+  });
+  var ground = new THREE.Mesh(new THREE.PlaneGeometry(2400,2400), groundMat);
+  ground.rotation.x = -Math.PI/2; ground.position.y = -0.05;
+  if(useShadow) ground.receiveShadow = true;
+  scene.add(ground);
+
+  // camera path
+  var CAM = [
+    {p:0.00, pos:[0,64,0.01],  tgt:[0,0,0]},
+    {p:0.12, pos:[12,72,36],   tgt:[0,4,0]},
+    {p:0.34, pos:[70,78,86],   tgt:[0,16,0]},
+    {p:0.66, pos:[104,72,110], tgt:[0,26,0]},
+    {p:1.00, pos:[69,50,74],   tgt:[0,29,0]}   /* 40% closer than the 0.66 hold */
+  ];
+  var _tgt = new THREE.Vector3(), _fwd = new THREE.Vector3(), _right = new THREE.Vector3();
+  // the plan is wide and flat, the tower is narrow and tall, so each phase
+  // gets its own pull-back budget on narrow viewports
+  var fitPlan = 1, fitTower = 1, vShift = 0, latShift = 0;
+  var END = CAM[CAM.length-1];
+  var END_DIST = Math.sqrt(
+    Math.pow(END.pos[0]-END.tgt[0],2) +
+    Math.pow(END.pos[1]-END.tgt[1],2) +
+    Math.pow(END.pos[2]-END.tgt[2],2));
+  function updateCamera(p, t){
+    var i=0;
+    for(i=0;i<CAM.length-1;i++){ if(p<=CAM[i+1].p) break; }
+    if(i>=CAM.length-1) i=CAM.length-2;
+    var a=CAM[i], b=CAM[i+1];
+    var fr = smooth((p-a.p)/(b.p-a.p||1));
+    var px=lerp(a.pos[0],b.pos[0],fr), py=lerp(a.pos[1],b.pos[1],fr), pz=lerp(a.pos[2],b.pos[2],fr);
+    var tx=lerp(a.tgt[0],b.tgt[0],fr), ty=lerp(a.tgt[1],b.tgt[1],fr), tz=lerp(a.tgt[2],b.tgt[2],fr);
+    if(!reduceMotion && p>0.9){
+      var ang = Math.sin(t*0.0004)*0.06;
+      var cs=Math.cos(ang), sn=Math.sin(ang);
+      var nx = px*cs - pz*sn, nz = px*sn + pz*cs;
+      px=nx; pz=nz; py += Math.sin(t*0.0006)*1.2;
+    }
+    // pull back on narrow viewports so the plan and the tower stay framed,
+    // and lift the tower clear of the hero copy on phone screens
+    var camBlend = smooth((p-0.05)/0.25);
+    var fit = lerp(fitPlan, fitTower, camBlend);
+    ty -= vShift * camBlend;
+    px = tx + (px-tx)*fit; py = ty + (py-ty)*fit; pz = tz + (pz-tz)*fit;
+
+    // roll the camera so the opening plan reads north-up, then settle upright
+    var u = smooth(p/0.12);
+    camera.up.set(0, u, -(1-u)).normalize();
+
+    // as the build tops out, slide the whole view left so the tower moves
+    // clear of the bento panel
+    var lat = latShift * smooth((p-0.70)/0.26);
+    if(lat > 0){
+      _fwd.set(tx-px, ty-py, tz-pz).normalize();
+      _right.crossVectors(_fwd, camera.up).normalize().multiplyScalar(lat);
+      px -= _right.x; py -= _right.y; pz -= _right.z;
+      tx -= _right.x; ty -= _right.y; tz -= _right.z;
+    }
+
+    camera.position.set(px,py,pz);
+    _tgt.set(tx,ty,tz);
+    camera.lookAt(_tgt);
+  }
+
+  // ghost structure on blueprint blue -> textured concrete on white
+  // A = ghosted on Site Navy (Sky / Accent 400) · B = built on Paper (neutrals + Steel)
+  var C = {
+    rebarA:new THREE.Color(0xb5d9fd), rebarB:new THREE.Color(0x6d6d72),  /* Sky   -> Neutral 600 */
+    edgeA:new THREE.Color(0xb5d9fd),  edgeB:new THREE.Color(0x416180),   /* Sky   -> Steel Deep  */
+    colA:new THREE.Color(0xb5d9fd),   colB:new THREE.Color(0xe9e9ea),    /* Sky   -> Neutral 200 */
+    slabA:new THREE.Color(0x87aed6),  slabB:new THREE.Color(0xd9d9dc),   /* A400  -> Neutral 300 */
+    glassA:new THREE.Color(0xb5d9fd), glassB:new THREE.Color(0x87aed6),  /* Sky   -> Accent 400  */
+    gndA:new THREE.Color(0x31485f),   gndB:new THREE.Color(0xe9e9ea)     /* A800  -> Neutral 200 */
+  };
+
+  var progress = 0;
+  function apply(p, time){
+    var dawn  = smooth((p-0.10)/0.24);   // blueprint blue -> daylight
+    var built = smooth((p-0.46)/0.42);   // daylight -> white, ghost -> concrete
+    var uiT   = smooth((p-0.20)/0.14);   // overlay text: white -> ink
+
+    updateCamera(p, time);
+    paintUI(dawn, built, uiT);
+    fogTo(dawn, built);
+
+    hemi.intensity = 0.15 + dawn*0.04 + built*0.06;
+    dir.intensity  = 0.05 + dawn*0.08 + built*0.22;
+    amb.intensity  = 0.85 - dawn*0.10 - built*0.13;
+
+    // linework has to darken as soon as the sky lightens, or it vanishes
+    var early = Math.max(built, dawn*0.62);
+    rebarMat.color.copy(C.rebarA).lerp(C.rebarB, early);
+    edgeMat.color.copy(C.edgeA).lerp(C.edgeB, early);
+    colMat.color.copy(C.colA).lerp(C.colB, built);
+    slabMat.color.copy(C.slabA).lerp(C.slabB, built);
+    glassMat.color.copy(C.glassA).lerp(C.glassB, built);
+    groundMat.color.copy(C.gndA).lerp(C.gndB, built);
+
+    edgeMat.opacity  = 0.9 - 0.5*built;    // keep an outline on Paper
+    glassMat.opacity = 0.3 - 0.06*built;   // glazing stays a tint, not a colour
+
+    // the plan hands over to the site plane before it is gone, so the
+    // structure is never floating over nothing
+    var bpOut = 1 - smooth((p-0.16)/0.20);   // plan is fully drawn at rest
+    bpMat.opacity  = bpOut * 0.95;
+    bpMat2.opacity = bpOut * 0.55;
+    bpGroup.visible = bpMat.opacity > 0.004;
+
+    var site = smooth((p-0.20)/0.22);
+    bpGrid.material.opacity   = 0.30 * bpOut;
+    siteGrid.material.opacity = 0.55 * site;
+    groundMat.opacity = 0.96 * site;
+
+    for(var k=0;k<animItems.length;k++){
+      var it = animItems[k];
+      var s = reveal(p, it.start, it.dur);
+      it.mesh.visible = s > 0.002;         // nothing flat-packed on the plan
+      it.mesh.scale.y = Math.max(0.0001, s);
+    }
+    updateUI(p);
+  }
+
+  var hint = document.getElementById("hint");
+  var phaseLabel = document.getElementById("phaseLabel");
+  var barFill = document.getElementById("barFill");
+  var pctEl = document.getElementById("pct");
+
+  // the bento lands card by card once the build tops out
+  var bento = document.getElementById("bento");
+  var bcards = bento ? bento.querySelectorAll(".bcard") : [];
+  var bentoKey = -1;
+
+  function updateBento(p){
+    if(!bento) return;
+    var key = (p*500)|0;
+    if(key === bentoKey) return;
+    bentoKey = key;
+    var any = 0;
+    for(var i=0;i<bcards.length;i++){
+      var o = smooth((p - 0.80 - i*0.012)/0.085);
+      bcards[i].style.opacity = o;
+      bcards[i].style.transform = reduceMotion ? "none"
+        : "translateY("+(22*(1-o)).toFixed(2)+"px) scale("+(0.97+0.03*o).toFixed(3)+")";
+      bcards[i].style.pointerEvents = o > 0.65 ? "auto" : "none";
+      if(o > any) any = o;
+    }
+    bento.style.visibility = any > 0.004 ? "visible" : "hidden";
+  }
+
+  function updateUI(p){
+    hint.style.opacity = 1 - smooth(p/0.04);
+    updateBento(p);
+
+    var label = "BLUEPRINT · PLAN VIEW";
+    if(p>=0.12 && p<0.30) label="STAGE 01 · REBAR & FOUNDATION";
+    else if(p>=0.30 && p<0.52) label="STAGE 02 · STRUCTURAL FRAME";
+    else if(p>=0.52 && p<0.86) label="STAGE 03 · FACADE & CLADDING";
+    else if(p>=0.86) label="BUILD COMPLETE · SOCIALHAT HQ";
+    phaseLabel.textContent = label;
+
+    var pct = Math.round(clamp(p/0.92,0,1)*100);
+    barFill.style.width = pct+"%";
+    pctEl.textContent = "BUILD "+ (pct<10?"0":"") + pct + "%";
+  }
+
+  var construction = document.getElementById("construction");
+  function computeProgress(){
+    var rect = construction.getBoundingClientRect();
+    var scrollable = construction.offsetHeight - window.innerHeight;
+    progress = clamp((-rect.top)/scrollable, 0, 1);
+  }
+
+  // ---------- stage snapping ----------
+  // Driven here rather than with CSS scroll-snap: a mandatory snap container
+  // swallows small wheel deltas (a 100px notch never reaches the next stop,
+  // so the page cannot advance at all) and blocks the content below it.
+  // One gesture = one build stage, and if this code never runs the page is
+  // simply a normal scroll.
+  var snapOK = window.matchMedia("(pointer:fine)").matches && !reduceMotion;
+  var STOPS = [], snapUntil = 0;
+
+  function computeStops(){
+    STOPS = [];
+    var nodes = document.querySelectorAll(".snapstop");
+    for(var i=0;i<nodes.length;i++){
+      STOPS.push(Math.round(nodes[i].getBoundingClientRect().top + window.pageYOffset));
+    }
+  }
+  function stopIndexNear(y){
+    var best = 0, bestD = Infinity;
+    for(var i=0;i<STOPS.length;i++){
+      var d = Math.abs(STOPS[i]-y);
+      if(d < bestD){ bestD = d; best = i; }
+    }
+    return best;
+  }
+  function goToStop(i){
+    i = clamp(i, 0, STOPS.length-1);
+    snapUntil = Date.now() + 620;
+    // two-arg form on purpose: html{scroll-behavior:smooth} already eases it,
+    // and older WebKit ignores the options object and jumps to the top
+    window.scrollTo(0, STOPS[i]);
+  }
+  // returns true when the gesture was consumed by a stage jump
+  function stageJump(dir){
+    if(!snapOK || STOPS.length < 2) return false;
+    var y = window.pageYOffset, last = STOPS[STOPS.length-1];
+    if(y > last+2) return false;                    // in the site content
+    if(y >= last-2 && dir > 0) return false;        // built: let it scroll on
+    if(Date.now() < snapUntil) return true;         // mid-jump, swallow it
+    goToStop(stopIndexNear(y) + dir);
+    return true;
+  }
+
+  window.addEventListener("wheel", function(e){
+    if(e.ctrlKey || Math.abs(e.deltaY) < 4) return;   // pinch-zoom / noise
+    if(stageJump(e.deltaY > 0 ? 1 : -1)) e.preventDefault();
+  }, {passive:false});
+
+  window.addEventListener("keydown", function(e){
+    var k = e.key || "", dir = 0;
+    if(k==="PageDown" || k===" " || k==="ArrowDown") dir = 1;
+    else if(k==="PageUp" || k==="ArrowUp") dir = -1;
+    else return;
+    if(stageJump(dir)) e.preventDefault();
+  });
+
+  function resize(){
+    var w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w,h,false);
+    camera.aspect = w/h;
+    camera.updateProjectionMatrix();
+    computeStops();
+    fitPlan = clamp(1.25/camera.aspect, 1, 2.8);
+    vShift  = clamp((1.25-camera.aspect)*22, 0, 19);
+
+    // the finished tower has to share the frame with the bento panel, so both
+    // the pull-back and the sideways slide come off the panel's real width
+    // (mirrors the CSS: left clamp(18px,5vw,72px), width min(620px,48vw))
+    var vw = window.innerWidth;
+    if(vw > 900){
+      var panelEnd = (clamp(vw*0.05,18,72) + Math.min(620, vw*0.48)) / vw;
+      fitTower = clamp(1.02 + (1.75-camera.aspect)*1.5, 1, 2.1);
+      latShift = (panelEnd/2) * 0.932 * END_DIST * fitTower * camera.aspect;
+    }else{
+      fitTower = clamp(0.78/camera.aspect, 1.4, 2.4);   // panel sits below
+      latShift = 0;
+    }
+  }
+
+  window.addEventListener("resize", resize);
+  window.addEventListener("scroll", computeProgress, {passive:true});
+  resize(); computeProgress();
+
+  var start = performance.now();
+  function tick(now){
+    apply(progress, now-start);
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  initSiteReveal();
+
+  function initSiteReveal(){
+    var els = document.querySelectorAll(".rise");
+    if(!("IntersectionObserver" in window)){ els.forEach(function(e){e.classList.add("in");}); return; }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add("in"); io.unobserve(en.target);} });
+    },{threshold:0.15});
+    els.forEach(function(e){io.observe(e);});
+  }
+
+  var form = document.getElementById("msgForm");
+  if(form){
+    form.addEventListener("submit", function(e){
+      e.preventDefault();
+      document.getElementById("sent").style.display="block";
+      form.reset();
+    });
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,8 +1,11 @@
 # socialhat
 
-A React + three.js scroll experience. The page renders through the camera baked
-into `scene.gltf`, scrubs that camera's animation from the scroll position, and
-tells a four-beat story in DOM text keyed to the animation's own keyframes.
+Two acts on one page. First a React + three.js film: the page renders through
+the camera baked into `scene.gltf`, scrubs that camera's animation from the
+scroll position, and tells a four-beat story in DOM text keyed to the
+animation's own keyframes. Then, when the animation runs out and the visitor
+keeps scrolling, the film dissolves into the actual socialhat website — the
+agency site, in full, on the same scroll.
 
 ```bash
 npm install
@@ -17,7 +20,8 @@ you need from a clean checkout.
 ### 1. The three.js scene
 
 [src/three/Experience.jsx](src/three/Experience.jsx) mounts a react-three-fiber
-`<Canvas>`, pinned full-screen behind the scrollable page. There are no lights
+`<Canvas>` inside a `position: sticky` stage, which pins it for the length of
+the hero block and then lets it scroll away. There are no lights
 in the React tree: `scene.gltf` ships its own (3 point lights + a sun via
 `KHR_lights_punctual`), and `GLTFLoader` instantiates them for you.
 
@@ -61,11 +65,16 @@ mixer.update(0)               // re-evaluate at that time, don't advance the clo
 the tracks at whatever `action.time` you set without stepping the clock, so
 scrubbing is exact and fully reversible in both directions.
 
-[src/hooks/useScrollProgress.js](src/hooks/useScrollProgress.js) returns scroll
-position as a **ref, not state**, because re-rendering React at 60fps to move a
-camera would be wasted work. The render loop reads `.current` inside `useFrame`,
-damps it with `THREE.MathUtils.damp`, and publishes the result in milliseconds
-so the story overlay rides the same clock as the camera.
+[src/hooks/useHeroScroll.js](src/hooks/useHeroScroll.js) measures scroll against
+the **hero block**, not the document — the site below it must not stretch the
+camera move — and returns the position as a **ref, not state**, because
+re-rendering React at 60fps to move a camera would be wasted work. The render
+loop reads `.current` inside `useFrame`, damps it with `THREE.MathUtils.damp`,
+and publishes the result in milliseconds so the story overlay rides the same
+clock as the camera.
+
+The animation is mapped to the first `HANDOFF_START` of that travel and holds
+its last frame after it. The rest is the handover, below.
 
 ### 4. The story layer
 

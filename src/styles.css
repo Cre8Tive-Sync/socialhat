@@ -1,8 +1,9 @@
 /* ==========================================================================
    Tokens
-   Neutrals come straight from the logo artwork, so the type and the mark are
-   the same family of ink. The accent is sampled off the amber point lights in
-   the scene.
+   One palette, two halves. The film's neutrals come straight from the logo
+   artwork, so the type and the mark are the same family of ink; the site's
+   half of the same palette is declared on `.paper` in site.css, where Ink is
+   the dark mark and Paper is the ground — the exact inverse of up here.
    ========================================================================== */
 
 :root {
@@ -12,6 +13,14 @@
   --ink-faint: #a09689;
   --ink-deep: #1d1f20;
   --accent: #e8913c;
+
+  /* Brand fields shared by both halves. The film needs Paper because that is
+     what it dissolves into on the handover. */
+  --paper: #f2f2f3;
+  --navy: #1d2d3d;
+  --steel: #5980a6;
+  --steel-deep: #416180;
+  --sky: #b5d9fd;
 
   /* Tight to the glyphs rather than a wash across the picture: on the dark
      room it is invisible, on the white sketch paper it is what separates the
@@ -24,11 +33,24 @@
   --gutter: clamp(1.5rem, 5vw, 5.5rem);
   --floor: clamp(4.5rem, 9vh, 7rem);
 
-  /* Layer order: canvas 0, scroll track 1, story 5, chrome 10, loader 20. */
+  /* Layer order: canvas 0, story 5, curtain 6, chrome 10, top bar 40,
+     loader 50. */
   --z-story: 5;
+
+  /* Written by useHeroScroll. `--scene` is the camera animation, 0 to 1;
+     `--handoff` is the dissolve that follows it. Declared here so the chrome
+     has sane values before the first scroll event lands. */
+  --scene: 0;
+  --handoff: 0;
 }
 
 * { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  /* Anchored sections clear the fixed top bar instead of hiding under it. */
+  scroll-padding-top: 5.5rem;
+}
 
 body {
   margin: 0;
@@ -41,23 +63,41 @@ body {
 }
 
 /* ==========================================================================
-   Stage
+   Hero
+   A tall block with a pinned stage inside it. The stage holds the screen for
+   the length of the block; when the block runs out it scrolls away and the
+   site underneath takes over. Nothing is fixed, so nothing has to be unfixed.
    ========================================================================== */
 
-/* Pinned behind everything. pointer-events:none keeps wheel and touch gestures
-   going to the document so the page still scrolls over the canvas. */
-.stage {
-  position: fixed;
-  inset: 0;
+.hero {
+  position: relative;
   z-index: 0;
-  pointer-events: none;
 }
 
-.stage canvas { display: block; }
+.hero__stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--bg);
+}
 
-.scroll-track {
-  position: relative;
-  z-index: 1;
+.hero__stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The handover. The camera has run out of animation and is holding its last
+   frame; scrolling on lays a sheet of the site's own Paper over it, and the
+   film is gone by the time the first section arrives. */
+.hero__curtain {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  background: var(--paper);
+  opacity: var(--handoff);
   pointer-events: none;
 }
 
@@ -73,12 +113,15 @@ body {
 .story {
   position: relative;
   z-index: var(--z-story);
+  /* Goes with the picture: the words dissolve into the paper alongside the
+     frame they were written against. */
+  opacity: calc(1 - var(--handoff));
 }
 
 .story:not([data-live="true"]) .beat { padding: 4rem var(--gutter); }
 
 .story[data-live="true"] {
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
 }
@@ -196,7 +239,7 @@ body {
 .loader {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 50;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -257,6 +300,13 @@ body {
   opacity: 0.7;
 }
 
+/* The film's own chrome, and only the film's: it clears the screen on the
+   handover so the site arrives without a scrub bar across its footer. */
+.scene-chrome {
+  opacity: calc(1 - var(--handoff));
+  pointer-events: none;
+}
+
 /* Amber reads against both ends of this scene: the white sketch paper it opens
    on and the dark room it travels through. */
 .scrubber {
@@ -267,7 +317,6 @@ body {
   width: 100%;
   height: 3px;
   background: rgb(29 31 32 / 0.18);
-  pointer-events: none;
 }
 
 .scrubber__fill {
@@ -275,12 +324,13 @@ body {
   height: 100%;
   background: var(--accent);
   transform-origin: left;
-  transform: scaleX(0);
+  transform: scaleX(var(--scene));
 }
 
 /* --- Scroll cue ----------------------------------------------------------
    Set in dark ink, because the only thing it ever has to compete with is the
-   white sketch paper of the opening shot. */
+   white sketch paper of the opening shot. It retires as soon as the visitor
+   has taken the hint — a couple of percent of the camera move is plenty. */
 
 .scroll-cue {
   position: fixed;
@@ -292,8 +342,7 @@ body {
   align-items: center;
   gap: 0.75rem;
   transform: translateX(-50%);
-  transition: opacity 450ms ease;
-  pointer-events: none;
+  opacity: clamp(0, calc(1 - var(--scene) * 60), 1);
 }
 
 .scroll-cue__label {
@@ -355,6 +404,7 @@ body {
   .beat__icon [data-draw] { stroke-dashoffset: 0; }
   .beat__icon [data-pop] { transform: none; }
 
+  html { scroll-behavior: auto; }
   .loader__bar--indeterminate { animation: none; }
   .scroll-cue__spark { animation: none; transform: translateY(120%); }
 }

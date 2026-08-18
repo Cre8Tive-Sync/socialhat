@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 
 /** Full-bleed loading curtain, shown until the glTF and its textures resolve. */
@@ -32,45 +32,29 @@ export function Loader() {
 }
 
 /**
- * Scrub bar plus the scroll cue. Both write to the DOM directly from the scroll
- * listener, so scrolling never triggers a React render.
+ * Scrub bar and scroll cue — the film's own chrome, and nothing else's.
+ *
+ * Not a line of JavaScript here: useHeroScroll writes `--scene` and `--handoff`
+ * onto the root element, and CSS turns them into a bar width, a cue that retires
+ * once the visitor has taken the hint, and chrome that clears out of the way
+ * when the site takes the screen.
  *
  * The cue is set in the brand's dark ink because the opening shot is a sheet of
- * white sketch paper, and it is the only thing on screen that has to compete
- * with that. It retires as soon as the visitor has taken the hint.
+ * white sketch paper, and that is the only thing it has to compete with.
  */
-export function ScrollProgressBar() {
-  const bar = useRef(null)
-  const cue = useRef(null)
-
-  useEffect(() => {
-    const update = () => {
-      const scrollable = document.documentElement.scrollHeight - window.innerHeight
-      const value = scrollable > 0 ? window.scrollY / scrollable : 0
-      if (bar.current) bar.current.style.transform = `scaleX(${value})`
-      if (cue.current) cue.current.style.opacity = value > 0.015 ? '0' : '1'
-    }
-    update()
-    window.addEventListener('scroll', update, { passive: true })
-    window.addEventListener('resize', update)
-    return () => {
-      window.removeEventListener('scroll', update)
-      window.removeEventListener('resize', update)
-    }
-  }, [])
-
+export function SceneChrome() {
   return (
-    <>
+    <div className="scene-chrome" aria-hidden="true">
       <div className="scrubber">
-        <div className="scrubber__fill" ref={bar} />
+        <div className="scrubber__fill" />
       </div>
 
-      <div className="scroll-cue" ref={cue}>
+      <div className="scroll-cue">
         <span className="scroll-cue__label">Scroll</span>
         <span className="scroll-cue__track">
           <span className="scroll-cue__spark" />
         </span>
       </div>
-    </>
+    </div>
   )
 }
