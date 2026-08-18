@@ -11,6 +11,8 @@ export function ScrollScene({ progress, timelineRef }) {
   const gltfCamera = cameras[0]
   const set = useThree((state) => state.set)
   const size = useThree((state) => state.size)
+  // Draws one frame. Under `frameloop="demand"` nothing renders without it.
+  const invalidate = useThree((state) => state.invalidate)
   // `get` reads current store state without subscribing this component to it.
   const get = useThree((state) => state.get)
 
@@ -36,8 +38,9 @@ export function ScrollScene({ progress, timelineRef }) {
     gltfCamera.manual = true
     const previous = get().camera
     set({ camera: gltfCamera })
+    invalidate()
     return () => set({ camera: previous })
-  }, [gltfCamera, get, set])
+  }, [gltfCamera, get, set, invalidate])
 
   // --- 2. Keep the projection correct across viewport sizes -----------------
   useLayoutEffect(() => {
@@ -54,7 +57,8 @@ export function ScrollScene({ progress, timelineRef }) {
       gltfCamera.fov = authored.fov
     }
     gltfCamera.updateProjectionMatrix()
-  }, [gltfCamera, authored, size])
+    invalidate()
+  }, [gltfCamera, authored, size, invalidate])
 
   // --- 3. Arm every clip as a paused, scrubbable action ---------------------
   const duration = useMemo(
@@ -72,8 +76,9 @@ export function ScrollScene({ progress, timelineRef }) {
       action.clampWhenFinished = true
       action.setLoop(THREE.LoopOnce, 1)
     })
+    invalidate()
     return () => list.forEach((action) => action.stop())
-  }, [actions])
+  }, [actions, invalidate])
 
   // --- 4. Scroll position -> animation time --------------------------------
   const scrubbed = useRef(0)
@@ -81,12 +86,11 @@ export function ScrollScene({ progress, timelineRef }) {
   useFrame((_, delta) => {
     // Damp toward the raw scroll value so flicks and trackpad jitter come out
     // as smooth camera moves instead of snapping frame to frame.
-    scrubbed.current = THREE.MathUtils.damp(
-      scrubbed.current,
-      progress.current,
-      SCROLL_SMOOTHING,
-      delta,
-    )
+    const target = progress.current
+    const next = THREE.MathUtils.damp(scrubbed.current, target, SCROLL_SMOOTHING, delta)
+    // Damping is asymptotic: without a floor it would never arrive, and the
+    // frame it never arrives on is a frame this keeps asking for.
+    scrubbed.current = Math.abs(target - next) < 0.0001 ? target : next
 
     const time = scrubbed.current * duration
     // Publish the damped position so the DOM story beats sit on exactly the
@@ -98,6 +102,10 @@ export function ScrollScene({ progress, timelineRef }) {
     }
     // Delta of 0: don't advance the clock, just re-evaluate at the time we set.
     mixer.update(0)
+
+    // Still catching up: ask for another frame. Arrived: say nothing, and the
+    // loop goes quiet until the next scroll wakes it.
+    if (scrubbed.current !== target) invalidate()
   })
 
   return <primitive object={scene} />

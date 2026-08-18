@@ -38,10 +38,13 @@
   --z-story: 5;
 
   /* Written by useHeroScroll. `--scene` is the camera animation, 0 to 1;
-     `--handoff` is the dissolve that follows it. Declared here so the chrome
-     has sane values before the first scroll event lands. */
+     `--handoff` is the handover that follows it, exact and welded to the
+     scrollbar; `--reveal` is that same number damped, and is what every
+     dissolve on the page is actually keyed to. Declared here so the chrome has
+     sane values before the first scroll event lands. */
   --scene: 0;
   --handoff: 0;
+  --reveal: 0;
 }
 
 * { box-sizing: border-box; }
@@ -87,19 +90,46 @@ body {
   display: block;
   width: 100%;
   height: 100%;
+  /* The frame leans in a touch as the paper opens over it, so the shot reads as
+     receding behind the site rather than being wiped off. Scaling up, never
+     down: down would open a rim of dark stage at the edges before the paper has
+     travelled far enough to cover it.
+
+     Free, as it happens: the camera has nothing left to animate by now, so the
+     canvas is idle and this is the compositor stretching the last frame it
+     drew, not three.js re-rendering the scene at a new scale. */
+  transform: scale(calc(1 + 0.045 * var(--reveal)));
 }
 
 /* The handover. The camera has run out of animation and is holding its last
-   frame; scrolling on lays a sheet of the site's own Paper over it, and the
-   film is gone by the time the first section arrives. */
+   frame; scrolling on opens the site's own Paper out of the middle of that
+   frame, and the film is gone by the time the first section arrives.
+
+   A scaled disc, not a fading sheet: scale is the one thing the compositor can
+   do without repainting anything, so the flood holds frame rate on the frames
+   the site is being rastered on. The gradient does the softness — the
+   ink is flat out to 76% of the radius and falls off from there, so the edge is
+   a wash rather than an iris. At full scale that opaque core is 76vmax, which
+   clears the half-diagonal of any viewport (70.7vmax at the square worst case),
+   so the screen ends up completely covered. */
 .hero__curtain {
   position: absolute;
-  inset: 0;
+  left: 50%;
+  top: 50%;
   z-index: 6;
-  background: var(--paper);
-  opacity: var(--handoff);
+  width: 100vmax;
+  height: 100vmax;
+  background: radial-gradient(
+    closest-side,
+    var(--paper) 0 76%,
+    rgb(242 242 243 / 0) 100%
+  );
+  /* Leads the site in: full coverage by the time the reveal is half done. */
+  transform: translate(-50%, -50%) scale(calc(clamp(0, var(--reveal) * 2, 1) * 2));
   pointer-events: none;
 }
+
+:root:not([data-phase="site"]) .hero__curtain { will-change: transform; }
 
 /* ==========================================================================
    Story
@@ -113,9 +143,10 @@ body {
 .story {
   position: relative;
   z-index: var(--z-story);
-  /* Goes with the picture: the words dissolve into the paper alongside the
-     frame they were written against. */
-  opacity: calc(1 - var(--handoff));
+  /* Goes with the picture, but ahead of it: the words are off the screen by
+     the time the paper reaches the corners, so the sign-off is never left
+     sitting on a blank sheet. */
+  opacity: clamp(0, calc(1 - var(--reveal) * 2.4), 1);
 }
 
 .story:not([data-live="true"]) .beat { padding: 4rem var(--gutter); }
@@ -303,7 +334,7 @@ body {
 /* The film's own chrome, and only the film's: it clears the screen on the
    handover so the site arrives without a scrub bar across its footer. */
 .scene-chrome {
-  opacity: calc(1 - var(--handoff));
+  opacity: clamp(0, calc(1 - var(--reveal) * 3), 1);
   pointer-events: none;
 }
 
@@ -403,6 +434,21 @@ body {
      does not: the icons are simply already finished. */
   .beat__icon [data-draw] { stroke-dashoffset: 0; }
   .beat__icon [data-pop] { transform: none; }
+
+  /* The handover keeps its timing and loses its travel: the paper stops
+     opening out of the centre and simply fades in flat, and the frame holds
+     still underneath it instead of leaning in. */
+  .hero__stage canvas { transform: none; }
+
+  .hero__curtain {
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--paper);
+    opacity: clamp(0, calc(var(--reveal) * 2), 1);
+    transform: none;
+  }
 
   html { scroll-behavior: auto; }
   .loader__bar--indeterminate { animation: none; }

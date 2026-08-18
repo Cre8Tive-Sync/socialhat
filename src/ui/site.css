@@ -39,6 +39,57 @@
   color: var(--ink);
 }
 
+/* ---------- the handover ----------
+   How the site arrives out of the last frame of the film.
+
+   Two transforms doing two unrelated jobs on one element:
+
+   translate — holds the site DEAD STILL. It is pulled up over the hero's last
+     viewport, so left alone it would ride up the screen at scroll speed and
+     slide in from the bottom edge. `--handoff-travel` is exactly how far it
+     would travel across the handover (set in App.jsx from HANDOFF_VIEWPORTS),
+     and this cancels every pixel of it: at the top of the handover the first
+     rule is already flush with the top of the screen, and it does not move
+     again. Keyed to `--handoff`, the exact number, never the damped one —
+     lag here is drift, and drift here is the slide we are getting rid of.
+
+   scale — the arrival. The site comes up out of the middle of the frame,
+     origin at the centre of the screen (50vh down from the site's own top,
+     which is where the translate above has parked it), so it grows into place
+     from the same point the paper is flooding out of.
+
+   Both are gone the moment the site owns the screen: a transform on this
+   element makes it the containing block for the fixed top bar, which is
+   harmless while the two are pinned together and wrong the instant the page
+   scrolls on. `data-phase` flips to `site` only at a dead-exact handoff of 1,
+   which is the frame the translate is already identity — so dropping it costs
+   nothing. */
+.paper {
+  transform:
+    translate3d(0, calc((var(--handoff, 0) - 1) * var(--handoff-travel, 0px)), 0)
+    scale(calc(0.96 + 0.04 * clamp(0, calc(var(--reveal, 0) * 1.9 - 0.4), 1)));
+  transform-origin: 50% 50vh;
+  /* Invisible for the whole film — it is parked over the bottom of the shot
+     well before the handover starts — then up through the paper. */
+  opacity: clamp(0, calc(var(--reveal, 0) * 2.6 - 0.57), 1);
+  pointer-events: none;
+}
+
+:root:not([data-phase="site"]) .paper { will-change: transform, opacity; }
+
+[data-phase="site"] .paper {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The hold stays — it is geometry, not decoration. The growth goes. */
+  .paper {
+    transform: translate3d(0, calc((var(--handoff, 0) - 1) * var(--handoff-travel, 0px)), 0);
+  }
+}
+
 /* Zero specificity, so anything below overrides it without a fight. */
 .paper :where(h1, h2, h3, h4, p, figure, blockquote, dl, dd, ul, ol) {
   margin: 0;
@@ -95,7 +146,8 @@
 /* ---------- top bar ----------
    Absent for the whole film — that shot swings from white sketch paper to a
    dark room, and no single treatment survives both — then it arrives with the
-   paper on the handover. `--handoff` comes off the root element. */
+   paper on the handover — last of everything, once the site is already there.
+   `--reveal` comes off the root element. */
 .paper .topbar {
   position: fixed;
   top: 0;
@@ -108,7 +160,7 @@
   gap: 18px;
   padding: 18px clamp(18px, 4vw, 48px);
   color: var(--ink);
-  opacity: clamp(0, calc(var(--handoff, 0) * 2.2 - 1.2), 1);
+  opacity: clamp(0, calc(var(--reveal, 0) * 2.6 - 1.6), 1);
   pointer-events: none;
 }
 
@@ -116,7 +168,14 @@
 [data-phase="site"] .paper .topbar { pointer-events: auto; }
 
 /* Paper held off the sections underneath, the same glass the design uses
-   everywhere else. Painted behind the bar's own contents. */
+   everywhere else. Painted behind the bar's own contents.
+
+   The blur is held back until the handover is over. A backdrop filter has to
+   read back everything painted behind it on every frame it is visible, and the
+   frames it would be visible for are exactly the ones where the site is coming
+   up through the paper — the most expensive frames on the page. It arrives with
+   nothing behind it worth blurring anyway: at that point the screen is the
+   site's own flat ground. */
 .paper .topbar::before {
   content: "";
   position: absolute;
@@ -124,6 +183,9 @@
   z-index: -1;
   background: rgb(242 242 243 / 0.82);
   border-bottom: 1px solid var(--rule-soft);
+}
+
+[data-phase="site"] .paper .topbar::before {
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
 }

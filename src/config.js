@@ -7,19 +7,29 @@ export const MODEL_URL = `${import.meta.env.BASE_URL}models/scene.glb`
 export const SCROLL_PAGES = 6
 
 /**
- * The handover — the dissolve from the film's last frame into the website —
- * takes exactly one of those viewports, the last one.
+ * The handover — the moment the film's last frame becomes the website.
  *
- * That is not a taste call. The site rides up at scroll speed, so one viewport
- * of scroll is precisely what it needs to travel from the bottom edge of the
- * screen to the top and land there on the same frame the paper finishes fading
- * in. Any other number leaves either a strip of blank paper or a website that
- * arrives before the film has gone.
+ * It does not slide: the site is held still at the top of the screen and comes
+ * up out of the centre of the frame, so the two halves cross at the middle of
+ * the picture rather than at its bottom edge. Nothing has to travel a viewport,
+ * which is why this is a fraction of one and not the whole thing — half a
+ * screen of scroll is enough to read as deliberate and still land fast.
  */
-export const HANDOFF_VIEWPORTS = 1
+export const HANDOFF_VIEWPORTS = 0.5
 
-/** Where on the hero's travel the camera animation ends and the dissolve begins. */
+/** Where on the hero's travel the camera animation ends and the handover begins. */
 export const HANDOFF_START = (SCROLL_PAGES - 1 - HANDOFF_VIEWPORTS) / (SCROLL_PAGES - 1)
+
+/**
+ * Damping on the reveal itself, so the transition is smooth in *time* rather
+ * than tied to how coarsely the wheel reports.
+ *
+ * The geometry — the site pinned dead still under the scroll — stays welded to
+ * the raw scroll position, because any lag there is visible as drift. Only the
+ * dissolve is damped: a wheel notch that jumps 100px mid-handover moves the
+ * reveal a step, and this eases across it. Higher = tighter to the scrollbar.
+ */
+export const HANDOFF_SMOOTHING = 9
 
 /** Scrub smoothing. Higher = the camera tracks the scrollbar more tightly. */
 export const SCROLL_SMOOTHING = 4
