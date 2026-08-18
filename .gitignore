@@ -5,3 +5,6 @@ dist
 
 # Generated from scene.gltf by `npm run pack-model`
 public/models/scene.glb
+
+# Copied out of three by `npm run pack-model`
+public/draco/

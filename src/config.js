@@ -3,6 +3,18 @@
 // Served straight from public/ — generated from scene.gltf by `npm run pack-model`.
 export const MODEL_URL = `${import.meta.env.BASE_URL}models/scene.glb`
 
+/**
+ * Where DRACOLoader fetches its decoder from.
+ *
+ * The model's geometry is Draco-compressed, so nothing renders until this
+ * loads. drei would otherwise pull it off Google's gstatic CDN — we copy it out
+ * of three at build time instead (scripts/copy-draco-decoder.mjs), so the
+ * decoder always matches the three we built against and first paint does not
+ * depend on a third party. Must keep the trailing slash: DRACOLoader
+ * concatenates filenames onto it.
+ */
+export const DRACO_DECODER_PATH = `${import.meta.env.BASE_URL}draco/`
+
 /** How many viewport-heights of scrolling the pinned hero occupies. */
 export const SCROLL_PAGES = 6
 

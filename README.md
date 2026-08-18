@@ -272,27 +272,46 @@ screen, the options in order of least disruption are: deepen `--ink-shadow` in
 data URIs. That inflates the bytes ~33% and forces the browser to parse one
 enormous JSON string and `atob()` it before anything can render.
 
-`npm run pack-model` ([scripts/gltf-to-glb.mjs](scripts/gltf-to-glb.mjs), zero
-dependencies) repacks it into `public/models/scene.glb`: **82 MB to 61.6 MB**,
-with the same bytes stored raw. `scene.gltf` is untouched and remains the
-source of truth; the `.glb` is generated and gitignored.
+`npm run pack-model` runs three steps. `scene.gltf` is untouched throughout and
+remains the source of truth; everything below it is generated and gitignored.
 
-It's still a 61 MB download. If you need it materially smaller, run the output
-through Draco or Meshopt compression:
+1. [scripts/gltf-to-glb.mjs](scripts/gltf-to-glb.mjs) (zero dependencies)
+   repacks it into `public/models/scene.glb` — **82 MB to 61.6 MB**, the same
+   bytes stored raw instead of base64.
+2. [scripts/draco-compress.mjs](scripts/draco-compress.mjs) Draco-compresses the
+   geometry in place — **61.6 MB to 10.7 MB**, a 5.8x reduction.
+3. [scripts/copy-draco-decoder.mjs](scripts/copy-draco-decoder.mjs) copies
+   three's decoder into `public/draco/`, so the browser has something to decode
+   with.
 
-```bash
-npx @gltf-transform/cli optimize public/models/scene.glb public/models/scene.glb --compress meshopt
-```
+Draco earns its keep here because geometry and index data are ~88% of the file
+(46.1 MB and 7.8 MB against 7.6 MB of texture). It only compresses geometry —
+the textures pass through untouched, and are now the largest thing left.
 
-then enable the matching loader (`useGLTF(url, true)` for Draco, or drei's
-meshopt support) in `ScrollScene`.
+The encode drops ~2000 degenerate zero-area triangles and moves vertices by at
+most 0.003% of each mesh's bounding box, under the 0.0061% step that 14-bit
+quantisation implies. Total surface area is unchanged. There are no skins and no
+morph targets, which is where Draco quantisation normally causes visible
+trouble, and the camera animation is 3 channels that Draco does not touch.
+
+The decoder is copied out of `three` rather than loaded from drei's default
+gstatic CDN, so its version cannot drift from the `three` we build against and
+first paint does not depend on a third party. `DRACO_DECODER_PATH` in
+`src/config.js` is passed to both `useGLTF` and `useGLTF.preload` in
+`ScrollScene` — they have to match, because drei keys its cache on the URL alone.
+
+If you need it smaller still, the textures are the remaining target, and that
+means KTX2/Basis rather than Draco.
 
 ## Layout
 
 ```
 scene.gltf                     source model (untouched)
 scripts/gltf-to-glb.mjs        .gltf + base64 -> binary .glb packer
+scripts/draco-compress.mjs     Draco geometry compression, in place
+scripts/copy-draco-decoder.mjs three's Draco decoder -> public/draco/
 public/models/scene.glb        generated, gitignored
+public/draco/                  generated, gitignored
 public/images/                 logo, dark + light
 src/config.js                  scroll, camera and logo tunables
 src/story.js                   beat copy, frame ranges, placement, fade curves

@@ -2,10 +2,17 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useAnimations, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
-import { MODEL_URL, PRESERVE_AUTHORED_FRAMING, SCROLL_SMOOTHING } from '../config'
+import {
+  DRACO_DECODER_PATH,
+  MODEL_URL,
+  PRESERVE_AUTHORED_FRAMING,
+  SCROLL_SMOOTHING,
+} from '../config'
 
 export function ScrollScene({ progress, timelineRef }) {
-  const { scene, animations, cameras } = useGLTF(MODEL_URL)
+  // The second argument is drei's `useDraco`: passing a string points
+  // DRACOLoader at our own copy of the decoder instead of its gstatic default.
+  const { scene, animations, cameras } = useGLTF(MODEL_URL, DRACO_DECODER_PATH)
   const { actions, mixer } = useAnimations(animations, scene)
 
   const gltfCamera = cameras[0]
@@ -111,4 +118,7 @@ export function ScrollScene({ progress, timelineRef }) {
   return <primitive object={scene} />
 }
 
-useGLTF.preload(MODEL_URL)
+// Same arguments as the hook above, deliberately. drei keys its cache on the
+// URL alone, so a preload with different loader options would win the race and
+// leave the hook reading a differently-configured result.
+useGLTF.preload(MODEL_URL, DRACO_DECODER_PATH)
