@@ -131,7 +131,51 @@ already finished.
 **Nothing in the overlay re-renders.** One rAF loop reads the shared timeline
 ref and writes custom properties; CSS turns those into the choreography.
 
-### 5. Why the text is DOM, not geometry
+### 5. The handover
+
+The film ends and the website begins on one continuous scroll, with no jump cut
+and no dead frame in between. Three things move together, all off two custom
+properties (`--scene`, `--handoff`) that `useHeroScroll` writes onto the root
+element — no React render, no second scroll listener, no rAF loop:
+
+1. **The camera holds.** Scrub progress is clamped at 1, so the last frame stays
+   on screen for the whole handover.
+2. **A sheet of Paper fades in over it** (`.hero__curtain`), and the story
+   overlay fades out with it, so the sign-off mark dissolves along with the shot
+   it was set against.
+3. **The site rides up through it.** `<Site>` is pulled up over the tail of the
+   hero by exactly one viewport, so its first rule crosses the bottom of the
+   screen on the frame the paper starts fading in.
+
+The one-viewport overlap is not a taste call. The site rises at scroll speed, so
+one viewport of scroll is precisely what it needs to travel from the bottom edge
+to the top and land flush there on the frame the paper reaches full opacity. Any
+other number leaves either a strip of blank paper or a website that arrives
+before the film has gone. `HANDOFF_VIEWPORTS` in
+[src/config.js](src/config.js) states it once and `HANDOFF_START` derives from
+it, so changing `SCROLL_PAGES` cannot break the geometry.
+
+The top bar is absent for the whole film — that shot swings from white sketch
+paper to a dark room, and no single treatment survives both — and fades in with
+the paper. It only becomes interactive once `data-phase` on the root flips to
+`site`, and the film's own chrome (scrub bar, scroll cue) clears out on the same
+value.
+
+### 6. The website
+
+[src/ui/Site.jsx](src/ui/Site.jsx) is the second act: top bar, the case for the
+work, a schedule of five services, the track record, the client list, signage,
+the site office and its form, and the footer. Plain semantic DOM throughout.
+
+It runs the palette upside down from the film. Everything is scoped to `.paper`
+in [src/ui/site.css](src/ui/site.css), where `--ink` is the dark mark and
+`--paper` is the ground — the exact inverse of the tokens above it — so the two
+halves can share one page without either one having to compromise. Rules and
+marks are always Steel; only the weight varies. Sections lift into place once
+each on an `IntersectionObserver`, and stay put under
+`prefers-reduced-motion: reduce`.
+
+### 7. Why the text is DOM, not geometry
 
 Every heading is a real `<h1>`/`<h2>`, every paragraph a real `<p>`, inside a
 `<main>`: selectable, translatable, and crawlable. Verified by SSR-rendering the
@@ -151,7 +195,8 @@ Title, description and Open Graph tags are in [index.html](index.html).
 
 | Setting | Where | Default | Effect |
 | --- | --- | --- | --- |
-| `SCROLL_PAGES` | config | `5` | Viewport-heights of scrolling mapped to the full 7.04s clip. Higher = slower, more deliberate camera. |
+| `SCROLL_PAGES` | config | `6` | Viewport-heights the pinned hero occupies. One of them is the handover, the rest carry the 7.04s clip. Higher = slower, more deliberate camera. |
+| `HANDOFF_VIEWPORTS` | config | `1` | Viewports of scroll the dissolve takes. `HANDOFF_START` derives from it; the site's overlap matches it. |
 | `SCROLL_SMOOTHING` | config | `4` | Damping. Higher tracks the scrollbar more tightly; lower glides more. |
 | `PRESERVE_AUTHORED_FRAMING` | config | `true` | Widen FOV instead of cropping on narrow viewports. |
 | `LOGO_SRC` | config | `-dark.svg` | Sign-off mark. |
