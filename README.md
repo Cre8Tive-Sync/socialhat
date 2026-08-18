@@ -78,12 +78,12 @@ ranges in the brief decode as frames and are converted to milliseconds in
 `story.js` via `frameToMs()`. If your source timeline was a different rate,
 change `FPS` there and everything re-derives.
 
-| Beat | Frames | Milliseconds | Scroll | Placement | Ink |
+| Beat | Frames | Milliseconds | Scroll | Placement | Icon |
 | --- | --- | --- | --- | --- | --- |
-| `hero` | 0–4 | 0–167 | 0–7% | lower left | dark |
-| `process` | 35–74 | 1458–3083 | 16–48% | upper left | light |
-| `evidence` | 90–110 | 3750–4583 | 48–70% | centre right | light |
-| `signoff` | 156–170 | 6500–7083 | 88–100% | centred | the logo |
+| `hero` | 0-4 | 0-167 | 0-7% | lower left | none |
+| `process` | 35-74 | 1458-3083 | 16-48% | upper left | research |
+| `evidence` | 90-110 | 3750-4583 | 48-70% | centre right | evidence |
+| `signoff` | 156-170 | 6500-7083 | 88-100% | centred | the logo |
 
 The listed range is the window where a beat sits at **full opacity**. The
 crossfade happens in the 8 frames on either side of it, so every frame you
@@ -98,23 +98,26 @@ viewport so the copy sits in open space rather than across the figures in the
 scene. Those are desktop compositions; below 40rem everything collapses to one
 column anchored low, where a thumb is not covering it.
 
-**There are no scrims.** Ink is chosen per beat instead. The opening shot is a
-sheet of white sketch paper, so that beat is set in the brand's dark ink and the
-scene stays completely unobscured; the middle beats sit against the dark room
-and are set light. A soft halo `text-shadow` holds the edges over pencil marks
-and light blooms without laying a gradient across the picture.
+**There are no scrims.** All type is white, and legibility comes from a
+`text-shadow` sized in `em` so it stays proportional from 84px display type down
+to body copy. It is tight to the glyphs rather than a wash across the picture:
+invisible against the dark room, and what separates the white type from the
+white sketch paper of the opening shot.
 
-**Motion.** One language across all four beats: the block drifts into place
-while its heading assembles **word by word**, each word masked in its own box so
-it still works when a heading wraps. Body copy trails the heading slightly, so
-the sentence lands just after the headline resolves. Amplitude and direction
-change per beat, so the sequence reads as edited rather than looped. Blur is
-composited only while a beat is in transit, never as a `blur(0)` layer at rest.
+**The type only crossfades.** No drift, no blur, no per-word reveal, no
+parallax. Beats fade in and out and nothing else moves.
 
-**Pointer parallax.** The type counter-drifts a few pixels against the cursor,
-heavily damped, so it sits *in* the scene rather than on a pane of glass in
-front of it. Desktop only, and off under `prefers-reduced-motion`, which keeps
-the crossfade (it *is* the storytelling) and drops the travel.
+**The icons are the one thing that animates.** Beats 2 and 3 carry an authored
+SVG mark ([src/ui/Icons.jsx](src/ui/Icons.jsx)) that draws itself in as the beat
+arrives: a brief under a magnifier for the research beat, plotted results
+against an axis for the evidence beat. Both are real drawn paths on one
+consistent 2px stroke, no icon font and no emoji.
+
+Every stroke carries `pathLength="1"`, which normalises it to a length of 1 and
+lets the draw-on run straight off a 0-1 progress value with no measuring. A
+per-stroke `data-delay` staggers them, so each mark builds in the order someone
+would actually draw it. Under `prefers-reduced-motion` the icons are simply
+already finished.
 
 **Nothing in the overlay re-renders.** One rAF loop reads the shared timeline
 ref and writes custom properties; CSS turns those into the choreography.
@@ -123,8 +126,8 @@ ref and writes custom properties; CSS turns those into the choreography.
 
 Every heading is a real `<h1>`/`<h2>`, every paragraph a real `<p>`, inside a
 `<main>`: selectable, translatable, and crawlable. Verified by SSR-rendering the
-component and extracting the text, which comes out as clean prose even with the
-per-word mask spans in place.
+component and extracting the text, which comes out as clean prose. The icons are
+`aria-hidden`, since the copy beside them already says it.
 
 - **Beats fade with `opacity`, never `display: none`,** so the copy stays in the
   DOM and the accessibility tree at all times.
@@ -146,7 +149,7 @@ Title, description and Open Graph tags are in [index.html](index.html).
 | `FPS` | story | `24` | Frame rate the beat numbers are interpreted at. |
 | `FADE_FRAMES` | story | `8` | Crossfade length on either side of each beat. |
 | `BEATS[].place` | story | per beat | `{ x, y, w }` position of the copy block. |
-| `BEATS[].tone` | story | per beat | `dark` or `light` ink for that shot. |
+| `BEATS[].icon` | story | per beat | `research`, `evidence`, or omitted. |
 
 **About the logo.** `socialhat_logo-dark.svg`, the `#1D1F20` near-black mark,
 lands on the bright surface the camera finishes on. The sign-off beat carries no
@@ -166,9 +169,11 @@ up from regular, because light-on-dark condensed type needs it), 400 for micro
 labels. Headings run at `line-height: 0.94` and body at `1.32`, tight enough
 that the two sit in the same rhythm.
 
-Both body inks were measured against shades sampled from the actual shots and
-clear 4.5:1 across the realistic range in each. Where a backdrop lands on a
-mid-tone that favours neither ink, the halo carries the edge.
+The one contrast risk left is the hero, which is white type over the brightly
+lit sketch paper. The drop shadow is what carries it. If it reads thin on your
+screen, the options in order of least disruption are: deepen `--ink-shadow` in
+`src/styles.css`, move that beat somewhere darker via its `place` in
+`story.js`, or set it back in `--ink-deep`.
 
 ## The model
 
@@ -204,6 +209,7 @@ src/hooks/useScrollProgress.js scroll position as a ref
 src/three/Experience.jsx       the Canvas
 src/three/ScrollScene.jsx      model + camera swap + scroll scrub
 src/ui/Story.jsx               the four narrative beats
+src/ui/Icons.jsx               authored SVG marks for beats 2 and 3
 src/ui/Overlay.jsx             loading curtain, scrub bar, scroll cue
 src/styles.css                 tokens, type system, beat choreography
 ```

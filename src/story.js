@@ -1,7 +1,7 @@
 /**
  * The narrative beats, keyed to the camera animation's own keyframes.
  *
- * scene.gltf was authored at 24fps — its sampler keys sit exactly 1/24s apart,
+ * scene.gltf was authored at 24fps: its sampler keys sit exactly 1/24s apart,
  * running frame 1 to frame 169 (169 / 24 = 7.0417s, the clip duration). The
  * frame ranges from the brief are converted to milliseconds here, so every
  * timing below is expressed in ms against that same 7041.67ms timeline.
@@ -21,16 +21,11 @@ export const FADE_FRAMES = 8
  * as percentages, w is its width. The values are tuned against what the camera
  * is actually looking at on each beat, so the copy sits in open space instead
  * of across the figures in the scene.
- *
- * `tone` picks the ink. The opening shot is a sheet of white sketch paper, so
- * that beat is set in the brand's dark ink and needs no scrim behind it. The
- * middle beats sit against the dark room and are set in light ink.
  */
 const BEATS = [
   {
     id: 'hero',
     frames: [0, 4],
-    tone: 'dark',
     place: { x: '4.5%', y: '60%', w: '40rem' },
     heading: { tag: 'h1', lines: ['Great marketing', 'starts on paper.'] },
     body: 'socialhat is a digital marketing studio. We start every brand with a pencil, a blank page and a hundred questions.',
@@ -38,9 +33,9 @@ const BEATS = [
   {
     id: 'process',
     frames: [35, 74],
-    tone: 'light',
     // Top-left: clear of the three figures standing around the table.
     place: { x: '5.5%', y: '9%', w: '36rem' },
+    icon: 'research',
     heading: { tag: 'h2', lines: ['The plan gets argued', 'before anything is drawn.'] },
     body:
       'We research the market, study the audience, and put the strategy in front of the room. ' +
@@ -49,10 +44,10 @@ const BEATS = [
   {
     id: 'evidence',
     frames: [90, 110],
-    tone: 'light',
     // Centre-right of frame: past the figure on the left, below the light bloom,
     // and short of the shape at the right edge.
     place: { x: '37%', y: '44%', w: '32rem' },
+    icon: 'evidence',
     heading: { tag: 'h2', lines: ['Built on evidence,', 'not on taste.'] },
     body:
       'The timing that earns a click. The logic that carries someone from scroll to decision. ' +
@@ -61,7 +56,6 @@ const BEATS = [
   {
     id: 'signoff',
     frames: [156, 170],
-    tone: 'dark',
     centred: true,
     logo: true,
   },
@@ -81,12 +75,13 @@ export const TIMELINE = BEATS.map((beat) => {
   }
 })
 
-/** Ken Perlin's smootherstep — a filmic crossfade with no seam at either end. */
+/** Ken Perlin's smootherstep: a filmic crossfade with no seam at either end. */
 const smootherstep = (p) => p * p * p * (p * (p * 6 - 15) + 10)
 
 /**
  * How present a beat is at a given moment on the timeline, 0 to 1.
- * Drives opacity, drift, blur and the word reveal all at once.
+ * The copy uses this for a straight crossfade and nothing else. The icons use
+ * it to draw themselves in.
  */
 export function beatPresence(beat, ms) {
   if (ms < beat.enterFrom || ms >= beat.exitTo) return 0
@@ -100,20 +95,10 @@ export function beatPresence(beat, ms) {
 }
 
 /**
- * Per-word reveal. Words start in sequence and finish together, so a heading
- * assembles itself rather than arriving as one slab.
+ * Staggered progress for one stroke of an icon, so the drawing builds in the
+ * order someone would actually sketch it rather than arriving all at once.
  */
-export function wordReveal(presence, index, count) {
-  if (count <= 1) return presence
-  const spread = 0.34
-  const start = (index / count) * spread
-  return Math.min(1, Math.max(0, (presence - start) / (1 - start)))
-}
-
-/**
- * Body copy trails its heading. Same presence value, delayed, so the sentence
- * lands just after the headline has finished assembling.
- */
-export function bodyReveal(presence) {
-  return Math.min(1, Math.max(0, (presence - 0.3) / 0.7))
+export function drawStagger(presence, delay) {
+  if (!delay) return presence
+  return Math.min(1, Math.max(0, (presence - delay) / (1 - delay)))
 }

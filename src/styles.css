@@ -8,10 +8,16 @@
 :root {
   --bg: #08080a;
   --ink: #f2f2f3;
-  --ink-body: #cfc6ba;
+  --ink-body: #e6dfd6;
   --ink-faint: #a09689;
   --ink-deep: #1d1f20;
   --accent: #e8913c;
+
+  /* Tight to the glyphs rather than a wash across the picture: on the dark
+     room it is invisible, on the white sketch paper it is what separates the
+     white type from the sheet. Sized in em so it stays proportional from
+     84px display type down to body copy. */
+  --ink-shadow: 0 0.025em 0.05em rgb(8 8 10 / 0.85), 0 0.02em 0.3em rgb(8 8 10 / 0.5);
 
   --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", system-ui, sans-serif;
 
@@ -60,6 +66,8 @@ body {
    Default state is a plain, fully visible, readable stack. The rAF loop sets
    data-live and takes over, so a JS failure leaves legible copy behind
    instead of four invisible sections.
+
+   The type does one thing: crossfade. No drift, no blur, no per-word reveal.
    ========================================================================== */
 
 .story {
@@ -81,32 +89,8 @@ body {
   opacity: var(--p, 1);
 }
 
-/* Ink is chosen per beat against what the camera is actually looking at. The
-   opening shot is a sheet of white sketch paper, so that beat is set in the
-   brand's dark ink; the middle beats sit against the dark room and are set
-   light. No scrims: the halo below is enough to hold an edge over pencil
-   marks or a light bloom without laying a gradient across the scene. */
-
-/* Inks are measured against the shades each shot actually contains. Both body
-   values clear 4.5:1 across the realistic range; where the backdrop lands on a
-   mid-tone that favours neither ink, the halo carries the edge. */
-
-.beat[data-tone="dark"] {
-  --beat-ink: var(--ink-deep);
-  --beat-ink-soft: #232627;
-  --beat-halo: 0 1px 26px rgb(255 255 255 / 0.7), 0 1px 4px rgb(255 255 255 / 0.55);
-}
-
-.beat[data-tone="light"] {
-  --beat-ink: var(--ink);
-  --beat-ink-soft: #e6dfd6;
-  --beat-halo: 0 1px 30px rgb(8 8 10 / 0.7), 0 1px 4px rgb(8 8 10 / 0.5);
-}
-
-/* --- Placement -----------------------------------------------------------
-   x / y / w arrive as inline custom properties from story.js, tuned per beat
-   against the composition of that shot. */
-
+/* Placement per beat: x / y / w arrive as inline custom properties from
+   story.js, tuned against the composition of that shot. */
 .story[data-live="true"] .beat__inner {
   position: absolute;
   left: var(--x, 5%);
@@ -114,40 +98,19 @@ body {
   width: min(var(--w, 36rem), calc(100% - var(--gutter) * 2));
 }
 
-/* --- Beat motion ---------------------------------------------------------
-   One language across all four: the block drifts into place while its heading
-   assembles word by word behind masks. Amplitude and direction change per beat
-   so the sequence reads as edited rather than looped. --px / --py are the
-   damped pointer parallax, a few pixels of counter-drift that sit the type in
-   the scene instead of on a pane of glass in front of it. */
-
-.beat__inner {
-  --drift: 1.5rem;
-  --shift: translate(0, 0);
-  transform: var(--shift)
-    translate3d(
-      calc(var(--px, 0) * 10px),
-      calc((1 - var(--p, 1)) * var(--drift) + var(--py, 0) * 7px),
-      0
-    );
+/* The sign-off centres in the viewport by flex, not by offsets, so the mark
+   sits dead centre at every size. */
+.story[data-live="true"] .beat[data-centred="true"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gutter);
 }
 
-.beat[data-beat="process"] .beat__inner { --drift: -1.5rem; }
-.beat[data-beat="evidence"] .beat__inner { --drift: 2rem; }
-
-.beat[data-centred="true"] .beat__inner {
-  left: 50%;
-  top: 50%;
+.story[data-live="true"] .beat[data-centred="true"] .beat__inner {
+  position: static;
   width: auto;
-  transform: translate(-50%, -50%)
-    translate3d(calc(var(--px, 0) * 8px), calc((1 - var(--p, 1)) * 0.75rem + var(--py, 0) * 5px), 0)
-    scale(calc(0.965 + var(--p, 1) * 0.035));
-}
-
-/* Only composite a blur while a beat is actually in transit. At rest the
-   filter is dropped entirely rather than layering blur(0) over the 3D scene. */
-.story[data-live="true"] .beat[data-moving="true"] .beat__inner {
-  filter: blur(calc((1 - var(--p, 1)) * 4px));
+  max-width: 100%;
 }
 
 /* ==========================================================================
@@ -156,12 +119,12 @@ body {
 
 .beat__heading {
   margin: 0;
-  color: var(--beat-ink, var(--ink));
+  color: var(--ink);
   font-weight: 700;
   font-size: clamp(1.85rem, 3.9vw, 2.875rem);
   line-height: 0.94;
   letter-spacing: -0.018em;
-  text-shadow: var(--beat-halo);
+  text-shadow: var(--ink-shadow);
 }
 
 .beat[data-beat="hero"] .beat__heading {
@@ -171,40 +134,16 @@ body {
 
 .beat__line { display: block; }
 
-/* The mask is per word, not per line, so a heading that wraps on a narrow
-   screen still hides each word inside its own box. The padding gives caps and
-   descenders room inside the clip; the matching negative margin keeps the
-   layout exactly where it was. */
-.beat__word {
-  display: inline-block;
-  /* overflow:hidden moves an inline-block's baseline to its bottom margin
-     edge, which would quietly reintroduce leading between the heading lines.
-     Aligning to the top takes the baseline out of the equation entirely. */
-  vertical-align: top;
-  overflow: hidden;
-  padding: 0.14em 0 0.18em;
-  margin: -0.14em 0 -0.18em;
-}
-
-.beat__word-inner {
-  display: block;
-  transform: translate3d(0, calc((1 - var(--wp, 1)) * 140%), 0);
-}
-
-/* Body copy trails the heading slightly: --bp is the same presence value,
-   delayed, so the sentence lands just after the headline has assembled. */
 .beat__body {
   margin: 1.1rem 0 0;
   max-width: 52ch;
-  color: var(--beat-ink-soft, var(--ink-body));
+  color: var(--ink-body);
   font-size: clamp(1.0625rem, 1.15vw, 1.25rem);
   font-weight: 500;
   line-height: 1.32;
   letter-spacing: 0.008em;
-  text-shadow: var(--beat-halo);
+  text-shadow: var(--ink-shadow);
   text-wrap: pretty;
-  opacity: var(--bp, 1);
-  transform: translate3d(0, calc((1 - var(--bp, 1)) * 0.9rem), 0);
 }
 
 .beat[data-beat="hero"] .beat__body {
@@ -216,6 +155,38 @@ body {
   display: block;
   width: min(58vw, 27rem);
   height: auto;
+}
+
+/* --- Icons ---------------------------------------------------------------
+   The one thing on the page that animates. Each stroke is normalised to
+   pathLength 1, so --dp (written per stroke by the rAF loop) maps straight to
+   dashoffset and the mark draws itself in as the beat arrives. */
+
+.beat__icon {
+  display: block;
+  width: clamp(2.25rem, 2.9vw, 2.75rem);
+  height: auto;
+  margin: 0 0 1.15rem;
+  color: var(--ink);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 3px rgb(8 8 10 / 0.7));
+}
+
+.beat__icon [data-draw] {
+  stroke-dasharray: 1;
+  stroke-dashoffset: calc(1 - var(--dp, 1));
+}
+
+.beat__icon [data-pop] {
+  fill: currentColor;
+  stroke: none;
+  transform: scale(var(--dp, 1));
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
 /* ==========================================================================
@@ -373,31 +344,17 @@ body {
     width: auto;
   }
 
-  .beat[data-centred="true"] .beat__inner {
-    left: 50%;
-    right: auto;
-    top: 50%;
-    bottom: auto;
-    width: auto;
-  }
-
   .beat__body { max-width: none; }
   .beat__logo { width: 72vw; }
   .scroll-cue__track { height: 2.75rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* The crossfade stays, because it is how the story is told. The travel does not. */
-  .beat__inner,
-  .beat[data-centred="true"] .beat__inner,
-  .beat__word-inner,
-  .beat__body {
-    transform: none !important;
-    filter: none !important;
-  }
+  /* The crossfade stays, because it is how the story is told. The drawing
+     does not: the icons are simply already finished. */
+  .beat__icon [data-draw] { stroke-dashoffset: 0; }
+  .beat__icon [data-pop] { transform: none; }
 
-  .loader__bar--indeterminate,
-  .scroll-cue__spark { animation: none; }
-
-  .scroll-cue__spark { transform: translateY(120%); }
+  .loader__bar--indeterminate { animation: none; }
+  .scroll-cue__spark { animation: none; transform: translateY(120%); }
 }
