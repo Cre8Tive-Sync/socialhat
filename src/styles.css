@@ -1,9 +1,9 @@
 /* ==========================================================================
    Tokens
-   One palette, two halves. The film's neutrals come straight from the logo
-   artwork, so the type and the mark are the same family of ink; the site's
-   half of the same palette is declared on `.paper` in site.css, where Ink is
-   the dark mark and Paper is the ground — the exact inverse of up here.
+   Two halves, two palettes. The film's neutrals come straight from the logo
+   artwork, so the type and the mark are the same family of ink. The site's
+   palette is declared on `.site` in site.css and shares exactly one value with
+   this file: the ground it arrives on, which the curtain below has to flood.
    ========================================================================== */
 
 :root {
@@ -14,13 +14,12 @@
   --ink-deep: #1d1f20;
   --accent: #e8913c;
 
-  /* Brand fields shared by both halves. The film needs Paper because that is
-     what it dissolves into on the handover. */
-  --paper: #f2f2f3;
-  --navy: #1d2d3d;
-  --steel: #5980a6;
-  --steel-deep: #416180;
-  --sky: #b5d9fd;
+  /* The site's own ground, which is what the film dissolves into on the
+     handover. It is the one token that has to be the same on both sides of the
+     seam: the curtain floods this, and the site is painted in it, so the two
+     are indistinguishable by the time the site owns the screen. Kept in sync
+     with `--ink` on `.site` in site.css. */
+  --site-ground: #150e38;
 
   /* Tight to the glyphs rather than a wash across the picture: on the dark
      room it is invisible, on the white sketch paper it is what separates the
@@ -33,8 +32,8 @@
   --gutter: clamp(1.5rem, 5vw, 5.5rem);
   --floor: clamp(4.5rem, 9vh, 7rem);
 
-  /* Layer order: canvas 0, story 5, curtain 6, chrome 10, top bar 40,
-     loader 50. */
+  /* Layer order: canvas 0, story 5, curtain 6, chrome 10, loader 50. The site
+     is a sibling at 5 and stacks its own chrome inside that. */
   --z-story: 5;
 
   /* Written by useHeroScroll. `--scene` is the camera animation, 0 to 1;
@@ -102,8 +101,8 @@ body {
 }
 
 /* The handover. The camera has run out of animation and is holding its last
-   frame; scrolling on opens the site's own Paper out of the middle of that
-   frame, and the film is gone by the time the first section arrives.
+   frame; scrolling on opens the site's own ground out of the middle of that
+   frame, and the film is gone by the time the masthead arrives.
 
    A scaled disc, not a fading sheet: scale is the one thing the compositor can
    do without repainting anything, so the flood holds frame rate on the frames
@@ -121,8 +120,8 @@ body {
   height: 100vmax;
   background: radial-gradient(
     closest-side,
-    var(--paper) 0 76%,
-    rgb(242 242 243 / 0) 100%
+    var(--site-ground) 0 76%,
+    rgb(21 14 56 / 0) 100%
   );
   /* Leads the site in: full coverage by the time the reveal is half done. */
   transform: translate(-50%, -50%) scale(calc(clamp(0, var(--reveal) * 2, 1) * 2));
@@ -435,7 +434,7 @@ body {
   .beat__icon [data-draw] { stroke-dashoffset: 0; }
   .beat__icon [data-pop] { transform: none; }
 
-  /* The handover keeps its timing and loses its travel: the paper stops
+  /* The handover keeps its timing and loses its travel: the ground stops
      opening out of the centre and simply fades in flat, and the frame holds
      still underneath it instead of leaning in. */
   .hero__stage canvas { transform: none; }
@@ -445,7 +444,7 @@ body {
     top: 0;
     width: 100%;
     height: 100%;
-    background: var(--paper);
+    background: var(--site-ground);
     opacity: clamp(0, calc(var(--reveal) * 2), 1);
     transform: none;
   }

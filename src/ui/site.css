@@ -1,42 +1,47 @@
 /* ==========================================================================
    The site half.
 
-   Everything here is scoped to `.paper`, because it runs the palette upside
-   down from the film: Ink is the dark mark, Paper is the ground, and Steel
-   draws every rule and mark on it. Condensed shouts, regular explains.
-   Nothing in between.
+   Everything the film hands over to, scoped to `.site` because it runs its own
+   palette and its own type: down here Ink is the deep indigo *ground* and Paper
+   is the mark on it — the exact inverse of the names in styles.css. Anton
+   shouts, Space Grotesk explains, IBM Plex Mono annotates. Nothing in between.
+
+   The whole block is inert while the film owns the screen. It is invisible, its
+   pointer events are off, and every animation in it is parked — see the phase
+   gate at the bottom of this file. The timers and listeners are gated the same
+   way from Site.jsx, off `data-phase`.
    ========================================================================== */
 
-.paper {
-  /* ---- core palette ---- */
-  --navy: #1d2d3d;        /* Site Navy  — the one dark field */
-  --steel-deep: #416180;  /* Steel Deep — body-size text in colour, links */
-  --steel: #5980a6;       /* Steel      — rules, marks, button fill, large type */
-  --sky: #b5d9fd;         /* Sky        — tints, annotation on navy */
-  --paper: #f2f2f3;       /* Paper      — the ground */
-  --ink: #1d1f20;         /* Ink        — all type on Paper */
+.site {
+  /* ---- the ground, and the fields raised off it ---- */
+  --ink: #150e38;
+  --ink-soft: #1e1554;
+  --panel: #241a63;
+  --panel-2: #2c1f73;
 
-  /* ---- accent ramp ---- */
-  --a300: #b5d9fd; --a400: #87aed6; --a500: #5980a6;
-  --a600: #4d7193; --a700: #416180; --a800: #31485f; --a900: #1d2d3d;
+  /* ---- the mark ---- */
+  --paper: #fbf2e4;
 
-  /* ---- neutrals ---- */
-  --n100: #f5f5f8; --n200: #e9e9ea; --n300: #d9d9dc;
-  --n500: #8a8a8f; --n600: #6d6d72; --n700: #545457;
+  /* ---- the three shouts ---- */
+  --coral: #ff3b5c;
+  --coral-dim: #d62c4b;
+  --lime: #cfff4d;
+  --marigold: #ffb627;
 
-  /* rules and marks are always Steel, only the weight varies */
-  --rule: rgb(89 128 166 / 0.34);
-  --rule-soft: rgb(89 128 166 / 0.18);
+  --line: rgb(251 242 228 / 0.14);
 
-  --cond: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
-  --body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --ff-display: "Anton", "Haettenschweiler", "Arial Narrow", sans-serif;
+  --ff-body: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --ff-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   position: relative;
   z-index: 5;
-  font-family: var(--body);
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--ff-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ---------- the handover ----------
@@ -48,36 +53,36 @@
      viewport, so left alone it would ride up the screen at scroll speed and
      slide in from the bottom edge. `--handoff-travel` is exactly how far it
      would travel across the handover (set in App.jsx from HANDOFF_VIEWPORTS),
-     and this cancels every pixel of it: at the top of the handover the first
-     rule is already flush with the top of the screen, and it does not move
-     again. Keyed to `--handoff`, the exact number, never the damped one —
-     lag here is drift, and drift here is the slide we are getting rid of.
+     and this cancels every pixel of it: at the top of the handover the top bar
+     is already flush with the top of the screen, and it does not move again.
+     Keyed to `--handoff`, the exact number, never the damped one — lag here is
+     drift, and drift here is the slide we are getting rid of.
 
    scale — the arrival. The site comes up out of the middle of the frame,
      origin at the centre of the screen (50vh down from the site's own top,
      which is where the translate above has parked it), so it grows into place
-     from the same point the paper is flooding out of.
+     from the same point the ink is flooding out of.
 
    Both are gone the moment the site owns the screen: a transform on this
-   element makes it the containing block for the fixed top bar, which is
-   harmless while the two are pinned together and wrong the instant the page
-   scrolls on. `data-phase` flips to `site` only at a dead-exact handoff of 1,
-   which is the frame the translate is already identity — so dropping it costs
-   nothing. */
-.paper {
+   element makes it the containing block for the fixed top bar, the grain and
+   the cursor, which is harmless while the two are pinned together and wrong the
+   instant the page scrolls on. `data-phase` flips to `site` only at a
+   dead-exact handoff of 1, which is the frame the translate is already
+   identity — so dropping it costs nothing. */
+.site {
   transform:
     translate3d(0, calc((var(--handoff, 0) - 1) * var(--handoff-travel, 0px)), 0)
     scale(calc(0.96 + 0.04 * clamp(0, calc(var(--reveal, 0) * 1.9 - 0.4), 1)));
   transform-origin: 50% 50vh;
   /* Invisible for the whole film — it is parked over the bottom of the shot
-     well before the handover starts — then up through the paper. */
+     well before the handover starts — then up through the ink. */
   opacity: clamp(0, calc(var(--reveal, 0) * 2.6 - 0.57), 1);
   pointer-events: none;
 }
 
-:root:not([data-phase="site"]) .paper { will-change: transform, opacity; }
+:root:not([data-phase="site"]) .site { will-change: transform, opacity; }
 
-[data-phase="site"] .paper {
+[data-phase="site"] .site {
   transform: none;
   opacity: 1;
   pointer-events: auto;
@@ -85,421 +90,1172 @@
 
 @media (prefers-reduced-motion: reduce) {
   /* The hold stays — it is geometry, not decoration. The growth goes. */
-  .paper {
+  .site {
     transform: translate3d(0, calc((var(--handoff, 0) - 1) * var(--handoff-travel, 0px)), 0);
   }
 }
 
 /* Zero specificity, so anything below overrides it without a fight. */
-.paper :where(h1, h2, h3, h4, p, figure, blockquote, dl, dd, ul, ol) {
+.site :where(h1, h2, h3, h4, p, figure, blockquote, ul, ol) {
   margin: 0;
   padding: 0;
 }
 
-.paper a { color: inherit; text-decoration: none; }
+.site a { color: inherit; text-decoration: none; }
+.site img { display: block; max-width: 100%; }
+.site ::selection { background: var(--lime); color: var(--ink); }
 
-/* ---------- type scale ---------- */
-.paper h1,
-.paper h2,
-.paper h3 {
-  font-family: var(--cond);
-  font-weight: 600;
-  text-transform: uppercase;
+.site :is(a, button, [tabindex]):focus-visible {
+  outline: 3px solid var(--lime);
+  outline-offset: 3px;
 }
 
-.paper h1 { font-size: clamp(40px, 5.6vw, 76px); letter-spacing: -0.02em; line-height: 0.94; }
-.paper h2 { font-size: clamp(28px, 4vw, 40px); line-height: 1; }
-.paper h3 { font-size: clamp(22px, 2.2vw, 26px); line-height: 1.05; }
-
-/* Label — kickers, nav, tags */
-.paper .navlinks a,
-.paper .nav-cta,
-.paper .dim span,
-.paper .svc .tag,
-.paper .socials a {
-  font-family: var(--cond);
-  font-weight: 600;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  line-height: 1.2;
+.site .wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 5vw, 64px);
 }
 
-/* Micro label — all micrographic annotation */
-.paper .mlbl,
-.paper .contact .info .item .k,
-.paper form.msg .field label,
-.paper form.msg .sent,
-.paper .signage .aside,
-.paper .foot .tag,
-.paper .foot .cr {
-  font-family: var(--cond);
-  font-weight: 600;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.17em;
-  line-height: 1.3;
+/* ---------- grain ----------
+   A single tile of fractal noise over the whole screen, holding the flat
+   fields together. Held at zero until the site owns the screen: `fixed` inside
+   a transformed ancestor is not fixed to the viewport, and there is nothing of
+   the film's this is meant to sit on. */
+.site .grain {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
 }
 
-.paper .lead { font-size: 17px; line-height: 1.55; }
+[data-phase="site"] .site .grain { opacity: 0.05; }
+
+/* ---------- cursor ----------
+   Mounted from JS only on a fine pointer, and only once the site owns the
+   screen, so there is no state here for either of those cases. */
+.site .cursor-dot,
+.site .cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 70;
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: difference;
+  will-change: transform;
+}
+
+.site .cursor-dot { width: 8px; height: 8px; background: var(--lime); }
+
+.site .cursor-ring {
+  width: 38px;
+  height: 38px;
+  border: 2px solid var(--lime);
+  transition: width 0.18s ease, height 0.18s ease, border-color 0.18s ease;
+}
+
+.site .cursor-ring.big { width: 84px; height: 84px; border-color: var(--coral); }
 
 /* ---------- top bar ----------
    Absent for the whole film — that shot swings from white sketch paper to a
    dark room, and no single treatment survives both — then it arrives with the
-   paper on the handover — last of everything, once the site is already there.
-   `--reveal` comes off the root element. */
-.paper .topbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 18px clamp(18px, 4vw, 48px);
-  color: var(--ink);
-  opacity: clamp(0, calc(var(--reveal, 0) * 2.6 - 1.6), 1);
-  pointer-events: none;
-}
-
-/* Only interactive once the site actually owns the screen. */
-[data-phase="site"] .paper .topbar { pointer-events: auto; }
-
-/* Paper held off the sections underneath, the same glass the design uses
-   everywhere else. Painted behind the bar's own contents.
+   ink on the handover, last of everything, once the site is already there.
+   `--reveal` comes off the root element.
 
    The blur is held back until the handover is over. A backdrop filter has to
    read back everything painted behind it on every frame it is visible, and the
    frames it would be visible for are exactly the ones where the site is coming
-   up through the paper — the most expensive frames on the page. It arrives with
-   nothing behind it worth blurring anyway: at that point the screen is the
-   site's own flat ground. */
-.paper .topbar::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: rgb(242 242 243 / 0.82);
-  border-bottom: 1px solid var(--rule-soft);
+   up through the ink — the most expensive frames on the page. */
+.site .topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 18px 0;
+  background: rgb(21 14 56 / 0.7);
+  border-bottom: 1px solid var(--line);
+  opacity: clamp(0, calc(var(--reveal, 0) * 2.6 - 1.6), 1);
+  pointer-events: none;
 }
 
-[data-phase="site"] .paper .topbar::before {
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+[data-phase="site"] .site .topbar {
+  pointer-events: auto;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
-/* wordmark is never set in Barlow */
-.paper .brand {
+.site .nav-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: var(--ink);
-  font-family: var(--cond);
-  font-weight: 600;
-  font-size: 23px;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  line-height: 1;
+  justify-content: space-between;
+  gap: 20px;
 }
 
-.paper .brand .mark {
+.site .logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ff-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+}
+
+.site .logo .dot {
   position: relative;
-  width: 22px;
-  height: 22px;
-  border: 1.5px solid var(--steel);
-  border-radius: 3px;
-  transform: rotate(45deg);
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--coral);
 }
 
-.paper .brand .mark::after {
+/* the heartbeat */
+.site .logo .dot::after {
   content: "";
   position: absolute;
-  inset: 4px;
-  border: 1.5px solid var(--steel);
-  border-radius: 1px;
+  inset: -4px;
+  border: 1.5px solid var(--coral);
+  border-radius: 50%;
+  animation: sh-pulse-ring 1.4s cubic-bezier(0.3, 0.6, 0.4, 1) infinite;
 }
 
-.paper .navlinks { display: flex; gap: 26px; color: var(--steel-deep); }
-.paper .navlinks a:hover { color: var(--ink); }
-
-.paper .nav-cta {
-  padding: 10px 16px;
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  color: var(--ink);
+@keyframes sh-pulse-ring {
+  0%   { transform: scale(0.6); opacity: 0.9; }
+  70%  { transform: scale(1.8); opacity: 0; }
+  100% { opacity: 0; }
 }
 
-.paper .nav-cta:hover { border-color: var(--steel); color: var(--steel); }
+/* Kinetic wordmark — a nod to the animated title card, one letter at a time. */
+.site .kletter { display: inline-block; position: relative; }
 
-@media (max-width: 820px) {
-  .paper .navlinks { display: none; }
+.site .logo-text.bounce .kletter {
+  animation: sh-letter-bounce 0.6s ease;
+  animation-delay: calc(var(--i) * 45ms);
+}
+
+@keyframes sh-letter-bounce {
+  0%   { transform: translateY(0); color: inherit; }
+  30%  { transform: translateY(-9px); color: var(--coral); }
+  55%  { transform: translateY(2px); color: var(--lime); }
+  78%  { transform: translateY(-3px); color: var(--marigold); }
+  100% { transform: translateY(0); color: inherit; }
+}
+
+.site .nav-links {
+  display: flex;
+  gap: 28px;
+  align-items: center;
+  list-style: none;
+}
+
+.site .nav-links a {
+  font-family: var(--ff-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.site .nav-links a:hover { opacity: 1; color: var(--lime); }
+
+/* Scoped one level deeper than `.site .btn` below, which is the rule it has to
+   out-weigh to stay hidden on a narrow screen. */
+.site .topbar .nav-cta { display: none; }
+
+@media (min-width: 860px) {
+  .site .topbar .nav-cta { display: inline-flex; }
+}
+
+@media (max-width: 859px) {
+  .site .nav-links { display: none; }
 }
 
 /* ---------- buttons ---------- */
-.paper .btn {
-  font-family: var(--cond);
-  font-weight: 600;
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  padding: 14px 24px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-}
-
-.paper .btn:active { transform: translateY(1px); }
-.paper .btn-primary { background: var(--steel); color: var(--paper); }
-.paper .btn-primary:hover { background: var(--steel-deep); }
-.paper .btn-ghost { border-color: var(--rule); color: var(--ink); background: transparent; }
-.paper .btn-ghost:hover { border-color: var(--steel); color: var(--steel-deep); }
-
-/* ---------- site content ---------- */
-.paper #site {
-  position: relative;
-  background: var(--paper);
-  /* The one seam between the two halves: a drawing rule, arriving out of the
-     paper the film just dissolved into. */
-  border-top: 1px solid var(--rule);
-}
-
-.paper .wrap { max-width: 1180px; margin: 0 auto; padding: 0 clamp(18px, 5vw, 48px); }
-.paper section { padding: clamp(72px, 11vh, 140px) 0; }
-
-.paper .dim { display: flex; align-items: center; gap: 18px; margin-bottom: 44px; }
-.paper .dim::before,
-.paper .dim::after { content: ""; height: 1px; background: var(--rule); flex: 1; }
-.paper .dim::before { flex: 0 0 26px; max-width: 26px; position: relative; }
-.paper .dim span { color: var(--steel-deep); white-space: nowrap; }
-.paper .dim b { color: var(--steel); font-weight: 600; }
-
-.paper .thesis h2 { max-width: 30ch; }
-.paper .thesis h2 em { font-style: normal; color: var(--steel); }
-.paper .thesis p {
-  margin-top: 24px;
-  max-width: 60ch;
-  color: var(--n700);
-  font-size: 17px;
-  line-height: 1.55;
-}
-
-/* ---------- services ---------- */
-.paper .svc-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1px;
-  background: var(--rule-soft);
-  border: 1px solid var(--rule-soft);
-}
-
-.paper .svc {
-  position: relative;
-  padding: 34px clamp(22px, 3vw, 40px);
-  background: var(--paper);
-  transition: background 0.25s ease;
-}
-
-.paper .svc:hover { background: var(--n200); }
-.paper .svc .tag { color: var(--n500); }
-.paper .svc h3 { margin-top: 16px; }
-.paper .svc p {
-  margin-top: 10px;
-  max-width: 40ch;
-  color: var(--n700);
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.paper .svc .go {
-  position: absolute;
-  right: clamp(22px, 3vw, 40px);
-  top: 34px;
-  color: var(--n500);
-  font-size: 20px;
-  transition: color 0.2s ease, transform 0.2s ease;
-}
-
-.paper .svc:hover .go { color: var(--steel); transform: translate(3px, -3px); }
-.paper .svc.wide { grid-column: 1 / -1; }
-
-@media (max-width: 720px) {
-  .paper .svc-grid { grid-template-columns: 1fr; }
-  .paper .svc.wide { grid-column: auto; }
-}
-
-/* ---------- track record ---------- */
-.paper .exp {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: clamp(30px, 6vw, 80px);
+.site .btn {
+  display: inline-flex;
   align-items: center;
-}
-
-.paper .exp .big {
-  font-family: var(--cond);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  font-size: clamp(72px, 12vw, 150px);
-  line-height: 0.9;
-  letter-spacing: -0.02em;
+  gap: 8px;
+  padding: 12px 20px;
+  border: 1.5px solid var(--paper);
+  border-radius: 999px;
+  background: var(--lime);
   color: var(--ink);
+  font-family: var(--ff-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
 }
 
-.paper .exp .big span { color: var(--steel); }
-.paper .exp .lead { margin-top: 6px; color: var(--n700); }
-.paper .exp .lead b { color: var(--ink); font-weight: 600; }
-
-@media (max-width: 720px) {
-  .paper .exp { grid-template-columns: 1fr; gap: 24px; }
+.site .btn:hover {
+  background: var(--coral);
+  border-color: var(--coral);
+  color: var(--paper);
+  box-shadow: 0 0 0 6px rgb(255 59 92 / 0.18);
 }
 
-/* ---------- client list ---------- */
-.paper .clients {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border-top: 1px solid var(--rule-soft);
-}
+.site .btn.outline { background: transparent; border-color: var(--paper); color: var(--paper); }
+.site .btn.outline:hover { background: var(--paper); color: var(--ink); }
 
-.paper .clients div {
+/* ---------- masthead ----------
+   Named for what it is rather than `hero`, which up in styles.css is already
+   the film's own six-viewport block.
+
+   `overflow: hidden` is here, and on the client band, rather than on `.site`,
+   because the only thing that bleeds is the ticker at the bottom of each — and
+   `.site` is the ancestor of every fixed thing on the page, so it is the one
+   element that should never be given an overflow at all. The vertical padding
+   below is what stops the rotated strip losing its corners to this. */
+.site .masthead { position: relative; overflow: hidden; padding: 170px 0 90px; }
+.site .masthead-inner { position: relative; z-index: 1; }
+
+.site .eyebrow {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 20px 6px;
-  border-bottom: 1px solid var(--rule-soft);
-  border-right: 1px solid var(--rule-soft);
-  color: var(--n700);
-  font-size: 13.5px;
+  margin-bottom: 22px;
+  color: var(--lime);
+  font-family: var(--ff-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* The chip — a paint swatch, rotated off true, one per section. */
+.site .eyebrow::before {
+  content: "";
+  flex-shrink: 0;
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  background: var(--chip, var(--lime));
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.18), 0 2px 4px rgb(0 0 0 / 0.25);
+  transform: rotate(-6deg);
+}
+
+.site .masthead h1 {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 28px;
+  font-family: var(--ff-display);
+  font-weight: 400;
+  font-size: clamp(3rem, 10.5vw, 8.4rem);
+  line-height: 0.92;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+.site .masthead h1 .accent { color: var(--coral); -webkit-text-stroke: 2px var(--paper); }
+
+.site .masthead-sub {
+  position: relative;
+  z-index: 1;
+  max-width: 560px;
+  margin-bottom: 40px;
+  color: rgb(251 242 228 / 0.85);
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
   line-height: 1.5;
 }
 
-.paper .clients div::before { content: "\25C7"; color: var(--steel); font-size: 11px; }
-.paper .clients div:nth-child(3n) { border-right: none; }
-
-@media (max-width: 720px) {
-  .paper .clients { grid-template-columns: repeat(2, 1fr); }
-  .paper .clients div:nth-child(3n) { border-right: 1px solid var(--rule-soft); }
-  .paper .clients div:nth-child(2n) { border-right: none; }
+.site .masthead-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 64px;
 }
 
-/* ---------- signage ---------- */
-.paper .signage {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  overflow: hidden;
-  border: 1px solid var(--rule-soft);
-  border-radius: 6px;
+/* The glitch, fired on an interval from JS by toggling `.glitching`. */
+.site .masthead h1.glitching { animation: sh-glitch-jump 0.32s steps(2, end); }
+.site .masthead h1.glitching .accent { animation: sh-glitch-color 0.32s steps(2, end); }
+
+@keyframes sh-glitch-jump {
+  0%   { transform: translate(0, 0); }
+  20%  { transform: translate(-3px, 2px); }
+  40%  { transform: translate(3px, -2px); }
+  60%  { transform: translate(-2px, 0); text-shadow: -2px 0 var(--lime), 2px 0 var(--coral); }
+  80%  { transform: translate(2px, 1px); text-shadow: 2px 0 var(--lime), -2px 0 var(--coral); }
+  100% { transform: translate(0, 0); text-shadow: none; }
+}
+
+@keyframes sh-glitch-color {
+  50% { -webkit-text-stroke: 2px var(--lime); color: var(--paper); }
+}
+
+/* Terminal caret, still blinking after the headline has finished. */
+.site .caret {
+  display: inline-block;
+  font-family: var(--ff-mono);
+  color: var(--lime);
+  -webkit-text-stroke: 0;
+  animation: sh-blink 1s steps(1) infinite;
+}
+
+@keyframes sh-blink { 50% { opacity: 0; } }
+
+/* ---------- vector tool ----------
+   The one thing on this page that is a toy: an unfinished bezier loop with a
+   loose end. Drag it back onto the anchor and the shape closes. */
+.site .vector-tool {
+  position: absolute;
+  top: -16px;
+  right: 0;
+  z-index: 5;
+  width: min(36vw, 400px);
+  opacity: 0.95;
+}
+
+.site .vector-tool svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  touch-action: none;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cline x1='5' y1='19' x2='15' y2='9' stroke='%23150E38' stroke-width='3' stroke-linecap='round'/%3E%3Cline x1='5' y1='19' x2='15' y2='9' stroke='%23CFFF4D' stroke-width='1.3' stroke-linecap='round'/%3E%3Cpath d='M13 3 L21 3 L21 11 L17 7 Z' fill='%23CFFF4D' stroke='%23150E38' stroke-width='1'/%3E%3Ccircle cx='5' cy='19' r='2' fill='%23FF3B5C' stroke='%23150E38' stroke-width='0.8'/%3E%3C/svg%3E") 5 19, crosshair;
+}
+
+.site .vt-hint {
+  margin: 6px 4px 0 0;
+  color: rgb(251 242 228 / 0.45);
+  font-family: var(--ff-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-align: right;
+  transition: color 0.3s ease;
+}
+
+.site .vt-hint.won { color: var(--lime); }
+
+.site .vt-full {
+  fill: none;
+  stroke: var(--lime);
+  stroke-width: 2.5;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.site .vt-full.show { opacity: 1; }
+
+.site .vt-path {
+  fill: none;
+  stroke: var(--coral);
+  stroke-width: 2.5;
+  stroke-dasharray: 7 6;
+  transition: stroke 0.3s ease;
+}
+
+.site .vt-path.hide { opacity: 0; }
+.site .vt-anchor { fill: var(--ink); stroke: var(--lime); stroke-width: 2; }
+
+.site .vt-spark {
+  fill: var(--lime);
+  opacity: 0;
+  transform: scale(0.25) rotate(-25deg);
+  transform-box: fill-box;
+  transform-origin: center;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.site .vt-spark.show { opacity: 1; transform: scale(1) rotate(0deg); }
+
+.site .vt-face {
+  font-size: 34px;
+  opacity: 0;
+  transform: scale(0.4);
+  transform-box: fill-box;
+  transform-origin: center;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.25s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.site .vt-face.show { opacity: 1; transform: scale(1); }
+
+.site .vt-message {
+  fill: var(--lime);
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.site .vt-message.show { opacity: 1; }
+
+.site .vt-node {
+  fill: var(--marigold);
+  stroke: var(--ink);
+  stroke-width: 2;
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.15s ease;
+}
+
+.site .vt-hit { fill: transparent; cursor: grab; touch-action: none; }
+.site .vt-hit:active { cursor: grabbing; }
+.site .vt-hit:focus-visible { outline: none; }
+
+.site .vt-hit:hover + .vt-node,
+.site .vt-hit:focus-visible + .vt-node { stroke: var(--paper); transform: scale(1.25); }
+
+/* ---------- palette ----------
+   Sits under the vector tool: same column, same width, one gap below the hint.
+   The offset is the tool's own top plus its maximum height. */
+.site .palette-row {
+  position: absolute;
+  top: calc(-16px + 400px + 22px);
+  right: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  width: min(36vw, 400px);
+}
+
+.site .swatch {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgb(251 242 228 / 0.25);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.site .swatch:hover { transform: translateY(-3px); }
+
+.site .swatch-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 5px;
   background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ff-mono);
+  font-size: 0.65rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
 }
 
-.paper .signage .body { padding: clamp(32px, 4vw, 56px); }
-.paper .signage h3 { font-size: clamp(26px, 3.2vw, 40px); line-height: 1; }
-.paper .signage p {
-  margin-top: 16px;
-  max-width: 46ch;
-  color: var(--n700);
-  font-size: 17px;
-  line-height: 1.55;
+.site .swatch:hover .swatch-tip,
+.site .swatch:focus-visible .swatch-tip { opacity: 1; }
+
+.site .swatch-tip.copied { background: var(--lime); }
+
+@media (max-width: 1024px) {
+  .site .vector-tool { opacity: 0.55; }
+  .site .palette-row { opacity: 0.6; }
 }
 
-.paper .signage .opts { display: flex; gap: 12px; margin-top: 26px; flex-wrap: wrap; }
+@media (max-width: 760px) {
+  .site .vector-tool,
+  .site .palette-row {
+    position: static;
+    width: 100%;
+    max-width: 420px;
+    margin: 36px auto 0;
+    opacity: 0.85;
+  }
 
-.paper .signage .aside {
+  .site .vt-hint { text-align: center; }
+  .site .palette-row { justify-content: center; margin-top: 14px; }
+}
+
+/* ---------- tickers ----------
+   Lanes of marquee on a slight rotation, running a screen-width past both
+   edges. The section each one sits in does the clipping. */
+.site .ticker-strip {
+  margin: 0 -6vw;
+  padding: 14px 0;
+  overflow: hidden;
+  background: var(--lime);
+  color: var(--ink);
+  white-space: nowrap;
+  transform: rotate(-1.6deg);
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.35);
+}
+
+.site .ticker-strip.alt { background: var(--paper); }
+
+.site .ticker-track {
+  display: inline-flex;
+  gap: 2.4rem;
+  animation: sh-scroll-left 22s linear infinite;
+}
+
+.site .ticker-track.reverse { animation: sh-scroll-right 26s linear infinite; }
+.site .ticker-strip:hover .ticker-track { animation-play-state: paused; }
+
+.site .ticker-track span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.4rem;
+  font-family: var(--ff-display);
+  font-size: 1.4rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.site .ticker-track span::after {
+  content: "\2726";
+  font-family: var(--ff-body);
+  font-size: 1rem;
+  opacity: 0.6;
+}
+
+@keyframes sh-scroll-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes sh-scroll-right {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+
+.site .clients-band {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: 14px;
-  padding: clamp(28px, 3vw, 44px);
-  border-left: 1px solid var(--rule-soft);
-  color: var(--n600);
+  overflow: hidden;
+  padding: 56px 0;
 }
 
-.paper .signage .aside .row {
+/* ---------- section furniture ---------- */
+.site section { position: relative; }
+.site .section-pad { padding: 120px 0; }
+
+.site .section-head {
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 680px;
+  margin-bottom: 64px;
+}
+
+.site .section-head h2,
+.site .head-2 {
+  font-family: var(--ff-display);
+  font-weight: 400;
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  line-height: 0.98;
+  text-transform: uppercase;
+}
+
+.site .section-head p {
+  color: rgb(251 242 228 / 0.75);
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+/* ---------- services ----------
+   Copy on the left, holding still; a pile of stickers on the right that the
+   page scrolls past. */
+.site .services-layout {
+  display: grid;
+  grid-template-columns: 0.82fr 1.18fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.site .services-layout .section-head {
+  position: sticky;
+  top: 110px;
+  max-width: 420px;
+  margin-bottom: 0;
+}
+
+.site .service-stack { position: relative; min-height: 760px; }
+
+.site .service-card {
+  position: absolute;
+  width: min(260px, 74vw);
+  padding: 30px 26px 26px;
+  border-radius: 18px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 10px 0 rgb(0 0 0 / 0.18);
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.28s ease;
+}
+
+/* the strip of tape holding it to the page */
+.site .service-card::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 26px;
+  width: 56px;
+  height: 20px;
+  background: rgb(251 242 228 / 0.9);
+  border: 1px solid rgb(0 0 0 / 0.08);
+  transform: rotate(-4deg);
+  box-shadow: 0 3px 6px rgb(0 0 0 / 0.15);
+}
+
+.site .service-stack .service-card:nth-child(1) { top: 0;     left: 0;     z-index: 1; transform: rotate(-3deg); }
+.site .service-stack .service-card:nth-child(2) { top: 70px;  left: 180px; z-index: 2; transform: rotate(2.4deg); }
+.site .service-stack .service-card:nth-child(3) { top: 230px; left: 40px;  z-index: 3; transform: rotate(-1.6deg); }
+.site .service-stack .service-card:nth-child(4) { top: 330px; left: 220px; z-index: 4; transform: rotate(3deg); }
+.site .service-stack .service-card:nth-child(5) { top: 500px; left: 90px;  z-index: 5; transform: rotate(-2.4deg); }
+
+/* Written to out-weigh the five positional rules above rather than to shout at
+   them: `:is()` carries the specificity of its heaviest argument, so this lands
+   on the same (0,4,0) as `:nth-child()` and takes it on source order. An
+   `!important` here would have to be answered by another one in the stacked
+   layout below, and then the whole card is arguing with itself. */
+.site .service-stack .service-card:is(:hover, :focus-within, .open) {
+  transform: rotate(0deg) translateY(-8px) scale(1.03);
+  z-index: 20;
+  box-shadow: 0 22px 0 var(--coral);
+}
+
+.site .service-stack .service-card:nth-child(even):is(:hover, :focus-within, .open) {
+  box-shadow: 0 22px 0 var(--marigold);
+}
+
+.site .service-tag {
+  display: inline-block;
+  margin-bottom: 16px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--lime);
+  font-family: var(--ff-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.site .service-num {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  font-family: var(--ff-mono);
+  font-size: 0.75rem;
+  opacity: 0.4;
+}
+
+.site .service-card h3 {
+  margin-bottom: 10px;
+  font-family: var(--ff-display);
+  font-weight: 400;
+  font-size: 1.5rem;
+  line-height: 1.02;
+  text-transform: uppercase;
+}
+
+.site .service-card .blurb {
+  color: rgb(21 14 56 / 0.75);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.site .service-detail {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, margin-top 0.35s ease;
+}
+
+.site .service-card.open .service-detail { max-height: 200px; margin-top: 14px; }
+
+.site .service-detail p {
+  padding-top: 14px;
+  border-top: 1px dashed rgb(21 14 56 / 0.25);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.site .service-more {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--coral-dim);
+  font-family: var(--ff-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.site .service-more .plus { transition: transform 0.3s ease; }
+.site .service-card.open .service-more .plus { transform: rotate(45deg); }
+
+/* 980, not a round 900: the furthest card sits at left:220 and is 260 wide, so
+   the pile needs 480px of column. Below roughly 940px of viewport the right
+   column is narrower than that and the stack starts pushing the page sideways,
+   so it unstacks before it can. */
+@media (max-width: 980px) {
+  .site .services-layout { grid-template-columns: 1fr; }
+  .site .services-layout .section-head { position: static; max-width: none; margin-bottom: 44px; }
+  .site .service-stack { min-height: 0; }
+
+  /* `:nth-child(n)` matches every card and buys the one point of specificity
+     needed to unstack them — same trick, same reason, no `!important`. */
+  .site .service-stack .service-card:nth-child(n) {
+    position: static;
+    width: 100%;
+    margin-bottom: 24px;
+    transform: rotate(0deg);
+  }
+
+  .site .service-stack .service-card:nth-child(n):is(:hover, :focus-within, .open) {
+    transform: translateY(-6px);
+  }
+}
+
+/* --- per-card business ------------------------------------------------- */
+
+/* 01 Web Development — a line that types itself out */
+.site .term-line {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--lime);
+  font-family: var(--ff-mono);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.site .term-line .type-text { padding-right: 2px; border-right: 2px solid var(--lime); }
+
+/* 02 Advertising — the countdown nobody waits out */
+.site .skip-badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  min-width: 64px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: rgb(21 14 56 / 0.08);
+  color: rgb(21 14 56 / 0.55);
+  font-family: var(--ff-mono);
+  font-size: 0.65rem;
+  text-align: center;
+}
+
+/* 03 Content — rec light, viewfinder corners, running timecode */
+.site .rec-dot {
+  position: absolute;
+  top: 24px;
+  left: 26px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--coral);
+  font-family: var(--ff-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.site .service-card[data-kind="content"]:hover .rec-dot,
+.site .service-card[data-kind="content"].open .rec-dot { opacity: 1; }
+
+.site .rec-dot i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--coral);
+  animation: sh-rec-blink 1.1s steps(1) infinite;
+}
+
+@keyframes sh-rec-blink { 50% { opacity: 0.15; } }
+
+.site .viewfinder::before,
+.site .viewfinder::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 0 solid var(--ink);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.site .viewfinder::before { top: 8px; left: 8px; border-top-width: 2px; border-left-width: 2px; }
+.site .viewfinder::after { bottom: 8px; right: 8px; border-bottom-width: 2px; border-right-width: 2px; }
+
+.site .service-card[data-kind="content"]:hover .viewfinder::before,
+.site .service-card[data-kind="content"]:hover .viewfinder::after,
+.site .service-card[data-kind="content"].open .viewfinder::before,
+.site .service-card[data-kind="content"].open .viewfinder::after { opacity: 0.5; }
+
+.site .timecode {
+  margin-top: 10px;
+  color: var(--coral-dim);
+  font-family: var(--ff-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+}
+
+/* 04 Social — a heart that bursts, and a number that rolls */
+.site .heart-trigger {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 4px;
+  border: 0;
+  background: none;
+  color: rgb(21 14 56 / 0.3);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.site .heart-trigger:hover { color: var(--coral); transform: scale(1.15); }
+
+.site .heart-pop {
+  position: absolute;
+  color: var(--coral);
+  font-size: 1rem;
+  pointer-events: none;
+  animation: sh-heart-float 0.8s ease-out forwards;
+}
+
+@keyframes sh-heart-float {
+  0%   { transform: translateY(0) scale(0.6); opacity: 1; }
+  100% { transform: translateY(-40px) scale(1.3); opacity: 0; }
+}
+
+.site .follow-counter {
+  margin-top: 10px;
+  color: var(--coral-dim);
+  font-family: var(--ff-mono);
+  font-size: 0.78rem;
+}
+
+/* 05 Signage — a tube warming up, and a scanline crossing it */
+.site .service-card[data-kind="signage"] h3 { animation: sh-led-flicker 6s linear infinite; }
+
+@keyframes sh-led-flicker {
+  0%, 92%, 95%, 100% { opacity: 1; }
+  93% { opacity: 0.4; }
+  94% { opacity: 0.85; }
+}
+
+.site .scanline {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  background: var(--lime);
+  box-shadow: 0 0 10px 2px rgb(207 255 77 / 0.55);
+  opacity: 0;
+  animation: sh-scan-move 3.2s linear infinite;
+}
+
+.site .service-card[data-kind="signage"]:hover .scanline,
+.site .service-card[data-kind="signage"].open .scanline { opacity: 0.6; }
+
+@keyframes sh-scan-move {
+  0%   { top: 14%; }
+  50%  { top: 86%; }
+  100% { top: 14%; }
+}
+
+/* ---------- stats ----------
+   The one raised field on the page. */
+.site .stats {
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.site .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 40px;
+}
+
+.site .stat-big {
+  font-family: var(--ff-display);
+  font-weight: 400;
+  font-size: clamp(3.2rem, 7vw, 5.2rem);
+  line-height: 0.9;
+  color: var(--lime);
+}
+
+.site .stat-label {
+  margin-top: 10px;
+  color: rgb(251 242 228 / 0.7);
+  font-family: var(--ff-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---------- about ---------- */
+.site .about-grid { display: grid; grid-template-columns: 1fr; gap: 48px; }
+
+@media (min-width: 860px) {
+  .site .about-grid { grid-template-columns: 0.8fr 1.2fr; align-items: start; }
+}
+
+.site .about-grid .head-2 { font-size: clamp(2rem, 4.5vw, 3rem); }
+
+.site .about-copy p {
+  margin-bottom: 24px;
+  font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+  line-height: 1.45;
+}
+
+.site .about-copy strong { color: var(--lime); font-weight: 500; }
+
+.site .chip-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+
+.site .chip {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: rgb(251 242 228 / 0.85);
+  font-family: var(--ff-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ---------- the ask ---------- */
+.site .cta-band {
+  position: relative;
+  overflow: hidden;
+  padding: 110px 0;
+  background: var(--coral);
+  color: var(--ink);
+  text-align: center;
+}
+
+.site .cta-band .eyebrow { justify-content: center; color: var(--ink); }
+
+.site .cta-band h2 {
+  margin-bottom: 22px;
+  font-family: var(--ff-display);
+  font-weight: 400;
+  font-size: clamp(2.6rem, 8vw, 6rem);
+  line-height: 0.94;
+  text-transform: uppercase;
+}
+
+.site .cta-band p {
+  max-width: 520px;
+  margin: 0 auto 40px;
+  font-size: 1.15rem;
+  opacity: 0.85;
+}
+
+.site .cta-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
+
+.site .cta-band .btn { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.site .cta-band .btn:hover { background: var(--lime); border-color: var(--lime); color: var(--ink); box-shadow: none; }
+.site .cta-band .btn.outline { background: transparent; border-color: var(--ink); color: var(--ink); }
+.site .cta-band .btn.outline:hover { background: var(--ink); color: var(--coral); }
+
+/* ---------- footer ---------- */
+.site footer { padding: 70px 0 40px; }
+
+.site .footer-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 40px;
+  padding-bottom: 44px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 30px;
+}
+
+.site .footer-brand .logo { margin-bottom: 14px; }
+
+.site .footer-brand p {
+  max-width: 320px;
+  color: rgb(251 242 228 / 0.7);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.site .footer-cols { display: flex; flex-wrap: wrap; gap: 60px; }
+
+.site .footer-col h4 {
+  margin-bottom: 16px;
+  color: var(--lime);
+  font-family: var(--ff-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.site .footer-col a {
+  display: block;
+  margin-bottom: 10px;
+  color: rgb(251 242 228 / 0.85);
+  font-size: 0.92rem;
+  transition: color 0.2s ease;
+}
+
+.site .footer-col a:hover { color: var(--coral); }
+
+.site .footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px dashed var(--rule-soft);
+  color: rgb(251 242 228 / 0.5);
+  font-family: var(--ff-mono);
+  font-size: 0.75rem;
 }
 
-.paper .signage .aside .row:last-child { border-bottom: none; padding-bottom: 0; }
-.paper .signage .aside .row b { color: var(--steel-deep); font-weight: 600; }
+.site .socials { display: flex; gap: 14px; margin-top: 20px; }
 
-@media (max-width: 720px) {
-  .paper .signage { grid-template-columns: 1fr; }
-  .paper .signage .aside { border-left: none; border-top: 1px solid var(--rule-soft); }
-}
-
-/* ---------- site office ---------- */
-.paper .contact { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(30px, 6vw, 72px); }
-.paper .contact .info { display: flex; flex-direction: column; gap: 20px; margin-top: 28px; }
-.paper .contact .info .item .k { color: var(--n500); }
-.paper .contact .info .item .v { margin-top: 5px; font-size: 17px; }
-.paper .contact .info .item .v a:hover { color: var(--steel-deep); }
-
-.paper .socials { display: flex; gap: 14px; margin-top: 8px; flex-wrap: wrap; }
-.paper .socials a {
-  padding: 9px 14px;
-  border: 1px solid var(--rule-soft);
-  border-radius: 999px;
-  color: var(--steel-deep);
-}
-.paper .socials a:hover { border-color: var(--steel); color: var(--ink); }
-
-.paper form.msg { display: flex; flex-direction: column; gap: 14px; }
-.paper form.msg .field label { display: block; margin-bottom: 7px; color: var(--n500); }
-
-.paper form.msg input,
-.paper form.msg textarea {
-  width: 100%;
-  padding: 13px 15px;
-  border: 1px solid var(--rule-soft);
-  border-radius: 5px;
-  background: var(--n100);
-  color: var(--ink);
-  font-family: var(--body);
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.paper form.msg input::placeholder,
-.paper form.msg textarea::placeholder { color: var(--n500); }
-.paper form.msg input:focus,
-.paper form.msg textarea:focus { outline: none; border-color: var(--steel); }
-.paper form.msg textarea { resize: vertical; min-height: 110px; }
-.paper form.msg .sent { color: var(--steel-deep); }
-
-@media (max-width: 720px) {
-  .paper .contact { grid-template-columns: 1fr; }
-}
-
-/* ---------- footer ----------
-   The second — and last — background field. */
-.paper footer { padding: 44px 0; background: var(--navy); color: var(--paper); }
-.paper .foot {
+.site .socials a {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 18px;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
-.paper footer .brand { color: var(--paper); }
-.paper footer .brand .mark,
-.paper footer .brand .mark::after { border-color: var(--sky); }
-.paper .foot .tag { color: var(--sky); }
-.paper .foot .cr { color: var(--a400); }
+
+.site .socials a:hover { background: var(--lime); border-color: var(--lime); }
+.site .socials svg { width: 16px; height: 16px; fill: var(--paper); }
+.site .socials a:hover svg { fill: var(--ink); }
+
+/* ---------- console ----------
+   The tag in the corner, and what it opens. For anyone who reads the source. */
+.site .egg-tag {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 55;
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--lime);
+  font-family: var(--ff-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+  opacity: clamp(0, calc(var(--reveal, 0) * 2.6 - 1.6), 1);
+  pointer-events: none;
+}
+
+[data-phase="site"] .site .egg-tag { pointer-events: auto; }
+
+.site .egg-panel {
+  position: fixed;
+  right: 18px;
+  bottom: 64px;
+  z-index: 55;
+  width: min(320px, calc(100vw - 36px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #0e0a26;
+  color: var(--lime);
+  font-family: var(--ff-mono);
+  font-size: 0.78rem;
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+  pointer-events: none;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.5);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.site .egg-panel.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+
+.site .egg-chrome { display: flex; gap: 6px; padding: 10px 12px; background: rgb(255 255 255 / 0.04); }
+.site .egg-chrome span { width: 9px; height: 9px; border-radius: 50%; }
+.site .egg-chrome span:nth-child(1) { background: var(--coral); }
+.site .egg-chrome span:nth-child(2) { background: var(--marigold); }
+.site .egg-chrome span:nth-child(3) { background: var(--lime); }
+
+.site .egg-body {
+  min-height: 110px;
+  padding: 14px 16px 18px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.site .egg-cursor { animation: sh-blink 1s steps(1) infinite; }
 
 /* ---------- arrival ---------- */
-.paper .rise {
+.site [data-reveal] {
   opacity: 0;
-  transform: translateY(26px);
+  transform: translateY(28px);
   transition: opacity 0.7s ease, transform 0.7s ease;
 }
 
-.paper .rise.in { opacity: 1; transform: none; }
+.site [data-reveal].in-view { opacity: 1; transform: none; }
+
+/* ---------- confetti ----------
+   Appended to `document.body`, so this is the one rule in the file that cannot
+   be scoped: a burst is fired from a click, and by then the site's own
+   transform is gone, but the bits still need to be free of it either way. */
+.confetti-bit {
+  position: fixed;
+  z-index: 80;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Phase gate + motion preferences
+   ========================================================================== */
+
+/* While the film owns the screen the site is invisible, so every marquee,
+   pulse and flicker in here is a compositor animation running against the
+   camera scrub for nothing. The timers and listeners are gated the same way,
+   from Site.jsx. */
+[data-phase="scene"] .site *,
+[data-phase="scene"] .site *::before,
+[data-phase="scene"] .site *::after { animation-play-state: paused; }
 
 @media (prefers-reduced-motion: reduce) {
-  .paper .rise { transition: none; opacity: 1; transform: none; }
+  .site *,
+  .site *::before,
+  .site *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.1s !important;
+  }
+
+  .site [data-reveal] { opacity: 1; transform: none; }
+
+  .site .logo .dot::after,
+  .site .masthead h1.glitching,
+  .site .masthead h1.glitching .accent,
+  .site .rec-dot i,
+  .site .service-card[data-kind="signage"] h3,
+  .site .scanline { animation: none !important; }
 }

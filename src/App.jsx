@@ -12,14 +12,15 @@ import { HANDOFF_VIEWPORTS, SCROLL_PAGES } from './config'
  *
  * The hero is a tall block with a pinned stage inside it: the camera scrubs
  * while it holds the screen. When the animation runs out, the last frame opens
- * from the middle — paper floods out of the centre of the shot and the site
- * comes up through it, held dead still, never sliding. The film and the website
- * cross at the centre of the picture, and what is left is the actual site.
+ * from the middle — the site's own ground floods out of the centre of the shot
+ * and the site comes up through it, held dead still, never sliding. The film
+ * and the website cross at the centre of the picture, and what is left is the
+ * actual site.
  */
 
 /**
  * The site is pulled up over the last viewport of the hero, so that on the
- * frame the hero runs out its first rule is flush with the top of the screen.
+ * frame the hero runs out its top bar is flush with the top of the screen.
  * That overlap is always one viewport — it is the hero's own last screen — and
  * has nothing to do with how long the handover takes.
  *
