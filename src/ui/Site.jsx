@@ -4,10 +4,11 @@ import { usePhase } from '../hooks/usePhase'
 /**
  * The website the film hands over to.
  *
- * Everything below the hero: the bar, the masthead, the client tickers, the
- * pile of service cards, the numbers, the crew, the ask, the footer. Plain
- * semantic DOM — real headings, real copy, real buttons — because this is the
- * half that has to be read, crawled and clicked.
+ * Everything below the hero: the bar and the menu it opens on a narrow screen,
+ * the masthead, the client tickers, the pile of service cards, the numbers, the
+ * crew, the ask, the footer. Plain semantic DOM — real headings, real copy,
+ * real buttons — because this is the half that has to be read, crawled and
+ * clicked.
  *
  * It carries its own palette on `.site`: down here Ink is the deep indigo
  * ground and Paper is the mark on it, the exact inverse of the film's tokens.
@@ -23,17 +24,25 @@ export function Site({ style }) {
   const awake = usePhase() === 'site'
 
   // Sections lift into place the first time they are reached, once each.
+  //
+  // Marked with an attribute nothing renders, never a class. Half the elements
+  // this observer touches compute their `className` in JSX — a service card
+  // gains and loses `open` — and React writes that attribute whole whenever the
+  // string changes. A class added out here would go with it, and the card would
+  // fade itself out the first time it was opened.
   useEffect(() => {
     const nodes = Array.from(root.current?.querySelectorAll('[data-reveal]') ?? [])
+    const arrive = (node) => node.setAttribute('data-in-view', '')
+
     if (!('IntersectionObserver' in window)) {
-      nodes.forEach((node) => node.classList.add('in-view'))
+      nodes.forEach(arrive)
       return
     }
     const io = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue
-          entry.target.classList.add('in-view')
+          arrive(entry.target)
           io.unobserve(entry.target)
         }
       },
@@ -213,24 +222,172 @@ function Cursor() {
    Top bar
    ========================================================================== */
 
+const NAV = [
+  ['Services', '#services'],
+  ['Work', '#work'],
+  ['About', '#about'],
+  ['Contact', '#contact'],
+]
+
+/** Where the CTA and the contact block sit in the menu's stagger. */
+const STAGGER_CTA = NAV.length + 1
+const STAGGER_FOOT = NAV.length + 2
+
+/** The width the row stops fitting, and the whole of the mobile menu's reason. */
+const WIDE = '(min-width: 860px)'
+
 function Topbar({ awake }) {
+  const [open, setOpen] = useState(false)
+  const burger = useRef(null)
+  const menu = useRef(null)
+  const wasOpen = useRef(false)
+
+  // Cross back to a width the row fits on and the menu is simply gone —
+  // otherwise it would still be holding the scroll lock behind a `display:none`.
+  useEffect(() => {
+    const wide = window.matchMedia(WIDE)
+    const close = () => {
+      if (wide.matches) setOpen(false)
+    }
+    close()
+    wide.addEventListener('change', close)
+    return () => wide.removeEventListener('change', close)
+  }, [])
+
+  // Everything that is only true while the panel is up: the page held still
+  // behind it, Escape, and Tab kept inside.
+  useEffect(() => {
+    if (!open) return
+    const root = document.documentElement
+
+    // Pay back the scrollbar the lock takes away, so nothing behind the panel
+    // shifts sideways on the way in or out.
+    const gutter = window.innerWidth - root.clientWidth
+    const before = { overflow: root.style.overflow, padding: root.style.paddingRight }
+    root.style.overflow = 'hidden'
+    if (gutter > 0) root.style.paddingRight = `${gutter}px`
+
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
+        setOpen(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      // The burger stays in the loop: it is the close button while this is up.
+      const stops = [burger.current, ...(menu.current?.querySelectorAll('a, button') ?? [])]
+      if (stops.length < 2) return
+      const first = stops[0]
+      const last = stops[stops.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKey)
+    menu.current?.querySelector('a, button')?.focus()
+
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      root.style.overflow = before.overflow
+      root.style.paddingRight = before.padding
+    }
+  }, [open])
+
+  // Hand focus back on the way out. A no-op when the menu closed because the
+  // viewport widened, since the burger is display:none by then.
+  useEffect(() => {
+    if (wasOpen.current && !open) burger.current?.focus()
+    wasOpen.current = open
+  }, [open])
+
   return (
-    <header className="topbar">
-      <div className="wrap nav-row">
-        <Logo greet={awake} />
-        <nav aria-label="Primary">
-          <ul className="nav-links">
-            <li><a href="#services">Services</a></li>
-            <li><a href="#work">Work</a></li>
-            <li><a href="#about">About</a></li>
-            <li><a href="#contact">Contact</a></li>
-          </ul>
-        </nav>
-        <a className="btn nav-cta" href="#contact" onClick={burstFrom} {...MAGNETIC}>
-          Start a project
-        </a>
-      </div>
-    </header>
+    <>
+      <header className="topbar">
+        <div className="wrap nav-row">
+          <Logo greet={awake} />
+          <nav aria-label="Primary">
+            <ul className="nav-links">
+              {NAV.map(([label, href]) => (
+                <li key={href}>
+                  <a href={href}>{label}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <a className="btn nav-cta" href="#contact" onClick={burstFrom} {...MAGNETIC}>
+            Start a project
+          </a>
+          <button
+            className="burger"
+            type="button"
+            ref={burger}
+            aria-expanded={open}
+            aria-controls="site-menu"
+            aria-label={open ? 'Close menu' : 'Open menu'}
+            onClick={() => setOpen((was) => !was)}
+          >
+            <span className="burger-box" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          </button>
+        </div>
+      </header>
+
+      {/* A sibling of the bar, never a child: the bar earns a backdrop filter
+          once the site arrives, and a filtered element is the containing block
+          for anything fixed inside it — this would end up the size of the bar
+          instead of the size of the screen. */}
+      <nav
+        className={open ? 'menu open' : 'menu'}
+        id="site-menu"
+        ref={menu}
+        inert={!open}
+        aria-label="Menu"
+      >
+        <p className="menu-kicker menu-stagger" style={{ '--i': 0 }}>
+          // where to
+        </p>
+
+        <ul className="menu-links">
+          {NAV.map(([label, href], i) => (
+            <li className="menu-stagger" style={{ '--i': i + 1 }} key={href}>
+              <a href={href} onClick={() => setOpen(false)}>
+                <span className="idx" aria-hidden="true">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
+
+        <div className="menu-cta menu-stagger" style={{ '--i': STAGGER_CTA }}>
+          <a
+            className="btn"
+            href="#contact"
+            onClick={(event) => {
+              burstFrom(event)
+              setOpen(false)
+            }}
+          >
+            Start a project
+          </a>
+        </div>
+
+        <div className="menu-foot menu-stagger" style={{ '--i': STAGGER_FOOT }}>
+          <a href="mailto:info@socialhat.com.au">info@socialhat.com.au</a>
+          <a href="tel:0892850811">08 9285 0811</a>
+          <span>41A Kirwan St, Floreat WA</span>
+        </div>
+      </nav>
+    </>
   )
 }
 

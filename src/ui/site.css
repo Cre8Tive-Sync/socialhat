@@ -276,6 +276,171 @@
   .site .nav-links { display: none; }
 }
 
+/* ---------- burger ----------
+   Only exists below the width the row stops fitting on, which is the same
+   860 the links and the CTA disappear at. Three rules become two on a
+   diagonal — the bars are the same elements throughout, so the close is the
+   open played backwards rather than a different icon swapped in. */
+.site .burger { display: none; }
+
+@media (max-width: 859px) {
+  .site .burger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-right: -8px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--paper);
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+  }
+}
+
+.site .burger[aria-expanded="true"] { border-color: var(--coral); }
+
+.site .burger-box { position: relative; display: block; width: 18px; height: 12px; }
+
+.site .burger-box i {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.18s ease, background 0.2s ease;
+}
+
+.site .burger-box i:nth-child(1) { top: 0; }
+.site .burger-box i:nth-child(2) { top: 5px; }
+.site .burger-box i:nth-child(3) { top: 10px; }
+
+.site .burger[aria-expanded="true"] .burger-box i:nth-child(1) {
+  transform: translateY(5px) rotate(45deg);
+  background: var(--coral);
+}
+
+.site .burger[aria-expanded="true"] .burger-box i:nth-child(2) { opacity: 0; }
+
+.site .burger[aria-expanded="true"] .burger-box i:nth-child(3) {
+  transform: translateY(-5px) rotate(-45deg);
+  background: var(--coral);
+}
+
+/* ---------- menu ----------
+   Full screen, flat ink, sitting under the bar so the burger it came out of
+   stays put and turns into its own close button.
+
+   `visibility` rather than `display`, so the panel can fade and the rows can
+   stagger; `inert` alongside it so the links are out of the tab order and out
+   of the accessibility tree the moment it is closed, in that order of trust. */
+.site .menu {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 104px clamp(20px, 5vw, 64px) calc(36px + env(safe-area-inset-bottom, 0px));
+  background: var(--ink);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.26s ease, visibility 0s linear 0.26s;
+}
+
+.site .menu.open {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.22s ease;
+}
+
+/* Above the width the burger exists at, the panel is not hidden — it is not
+   there. Nothing to trap, nothing to read, nothing to leave open. */
+@media (min-width: 860px) {
+  .site .menu { display: none; }
+}
+
+/* Opaque while the panel is up: the bar's usual 70% ink over the panel's flat
+   ink would read as a lighter band across the top of one field. */
+.site .topbar:has(+ .menu.open) { background: var(--ink); }
+
+/* The corner tag is the one thing above the panel's layer. It gets out of the
+   way rather than floating over it. */
+[data-phase="site"] .site:has(.menu.open) :is(.egg-tag, .egg-panel) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.site .menu-kicker {
+  margin-bottom: 18px;
+  color: rgb(251 242 228 / 0.45);
+  font-family: var(--ff-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
+.site .menu-links { list-style: none; border-top: 1px solid var(--line); }
+.site .menu-links li { border-bottom: 1px solid var(--line); }
+
+.site .menu-links a {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 18px 0;
+  font-family: var(--ff-display);
+  font-weight: 400;
+  font-size: clamp(2rem, 11vw, 3.4rem);
+  line-height: 1;
+  text-transform: uppercase;
+  transition: color 0.2s ease, padding-left 0.2s ease;
+}
+
+.site .menu-links a:hover,
+.site .menu-links a:focus-visible { color: var(--coral); padding-left: 10px; }
+
+.site .menu-links .idx {
+  flex-shrink: 0;
+  color: var(--lime);
+  font-family: var(--ff-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+}
+
+.site .menu-cta { margin-top: 30px; }
+.site .menu-cta .btn { width: 100%; justify-content: center; }
+
+/* `auto` so it settles on the bottom edge of a tall screen and simply follows
+   the links on a short one. */
+.site .menu-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: auto;
+  padding-top: 36px;
+  color: rgb(251 242 228 / 0.55);
+  font-family: var(--ff-mono);
+  font-size: 0.78rem;
+}
+
+.site .menu-foot a:hover { color: var(--lime); }
+
+.site .menu-stagger {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.34s ease, transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.site .menu.open .menu-stagger {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(var(--i) * 55ms);
+}
+
 /* ---------- buttons ---------- */
 .site .btn {
   display: inline-flex;
@@ -1207,14 +1372,17 @@
 
 .site .egg-cursor { animation: sh-blink 1s steps(1) infinite; }
 
-/* ---------- arrival ---------- */
+/* ---------- arrival ----------
+   Keyed to an attribute rather than a class, because several of the elements
+   wearing it also compute a `className` in JSX — and React rewrites that
+   attribute whole. See the observer in Site.jsx. */
 .site [data-reveal] {
   opacity: 0;
   transform: translateY(28px);
   transition: opacity 0.7s ease, transform 0.7s ease;
 }
 
-.site [data-reveal].in-view { opacity: 1; transform: none; }
+.site [data-reveal][data-in-view] { opacity: 1; transform: none; }
 
 /* ---------- confetti ----------
    Appended to `document.body`, so this is the one rule in the file that cannot
@@ -1251,6 +1419,13 @@
   }
 
   .site [data-reveal] { opacity: 1; transform: none; }
+
+  /* The blanket rule above shortens durations but leaves delays alone, and a
+     staggered menu is a stagger however fast each row runs. The rows are simply
+     there; the panel still fades, because that is what tells you it opened. */
+  .site .menu { transition-delay: 0s; }
+  .site .menu-stagger { opacity: 1; transform: none; }
+  .site .menu.open .menu-stagger { transition-delay: 0s; }
 
   .site .logo .dot::after,
   .site .masthead h1.glitching,
