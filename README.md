@@ -15,6 +15,13 @@ npm run dev
 `predev` packs the model automatically the first time, so `npm run dev` is all
 you need from a clean checkout.
 
+The assistant (§8) needs a key. Without one the site runs and the widget
+degrades to a handoff; with one it works in dev exactly as in production:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... npm run dev
+```
+
 ## How it works
 
 ### 1. The three.js scene
@@ -201,7 +208,7 @@ fades in flat, the frame holds still, the site does not grow.
 
 [src/ui/Site.jsx](src/ui/Site.jsx) is the second act: top bar, the case for the
 work, a schedule of five services, the track record, the client list, signage,
-the site office and its form, and the footer. Plain semantic DOM throughout.
+the ask, the enquiry form and the footer. Plain semantic DOM throughout.
 
 It runs the palette upside down from the film. Everything is scoped to `.paper`
 in [src/ui/site.css](src/ui/site.css), where `--ink` is the dark mark and
@@ -211,7 +218,198 @@ marks are always Steel; only the weight varies. Sections lift into place once
 each on an `IntersectionObserver`, and stay put under
 `prefers-reduced-motion: reduce`.
 
-### 7. Why the text is DOM, not geometry
+### 7. The enquiry form
+
+[src/ui/Enquiry.jsx](src/ui/Enquiry.jsx) replaces the four near-identical forms
+the old site ran. Four different people arrive at them — an agency client,
+someone who wants a website, a venue with blank wall space, an advertiser buying
+screen time — and they all land looking the same, so every one of them needs a
+phone call before anyone knows what they wanted.
+
+This asks that question once, up front, then renders only the fields that path
+needs and routes the result to the inbox that handles it. The shape is data:
+`PATHS` drives the chooser and each path's `fields` drives its panel, so a new
+question is a line in an array. A field with `showIf` that is not showing is not
+part of the form at all, not merely hidden, so nothing stale is ever submitted.
+
+Two things are deliberately absent:
+
+- **No maths test.** The live forms ask you to solve `5 + 9 =` before they will
+  send — friction paid by every real enquiry to inconvenience a bot for one
+  second. In its place: an off-screen honeypot field and a three-second
+  time-to-submit floor. Both trip silently, returning the success state rather
+  than an error, so a bot has nothing to learn from.
+- **No `New Field`.** Every field is there because the answer changes how the
+  follow-up goes.
+
+Everything answered by tapping — the path cards, the multi-picks, the single
+choices — is a real `<button>` carrying `aria-pressed`, not a styled checkbox.
+
+`ENQUIRY_ENDPOINT` in [src/config.js](src/config.js) is where the JSON POSTs.
+While it is empty the form composes the same payload as a `mailto:` addressed to
+the path's inbox, so it works and is testable with no server. Set the endpoint
+and the fallback drops out with no other change. The routing table is the
+`inbox` key on each path in `PATHS` — all four point at `info@` today because it
+is the only address the business publishes.
+
+### 8. HatBot
+
+SocialHat is staffed 8am–4pm weekdays. Every visitor outside that window
+currently reaches a form and hears nothing until the next business morning, and
+most of them don't wait. [src/ui/Assistant.jsx](src/ui/Assistant.jsx) answers
+them, and when one is worth a call it takes their details instead.
+
+**Being noticed is half the job.** A corner pill only works on someone who
+already reads a corner pill as "chat", and a good share of this audience —
+business owners who came here for a phone number — does not. So three things
+are deliberate: the launcher is larger than every other button on the site, set
+in the body face rather than the uppercase mono the rest of the furniture uses,
+and it keeps its label on a phone rather than collapsing to an icon. And after
+`CHAT_NUDGE_DELAY` of reading, HatBot speaks first: a one-line cream speech
+bubble above the launcher, notched corner aimed at it. The bubble *is* the
+button — one target, the whole surface — with an × beside it, and once that is
+hit the nudge does not come back that visit (`sessionStorage`, wrapped, because
+the accessor itself throws in a private window). The prompt is told the same thing the CSS is: assume the reader may not
+use chatbots often, never ask anyone to rephrase, guess at what they meant and
+say what you assumed.
+
+The browser half knows nothing. The system prompt, the facts and the tool
+definitions all live in [api/knowledge.js](api/knowledge.js), which is never
+bundled — a visitor can read the answers, not the instructions — and the API key
+never leaves the function.
+
+**The endpoint.** [api/chat.js](api/chat.js) takes a Web-standard `Request` and
+returns a streaming SSE `Response`, which is the shape Vercel Edge, Netlify
+Functions v2 and Cloudflare Workers all accept.
+[vite-api-plugin.js](vite-api-plugin.js) adapts Connect's `(req, res)` to that
+same file in `npm run dev`, so there is one implementation and no mock. Set
+`ANTHROPIC_API_KEY`; without it the endpoint streams a handoff to the form and
+the phone number rather than 500ing, so a keyless deploy degrades instead of
+breaking.
+
+**Two tools.** `capture_lead` records an enquiry (POSTed to `LEAD_WEBHOOK`, or
+logged with the model told plainly it wasn't delivered, so it never tells a
+visitor something untrue). `open_enquiry_form` reaches out of the chat and opens
+§7's form on the right path, via a `socialhat:enquiry` window event — the
+visitor lands on a form already filled in as far as the conversation got, rather
+than a blank one.
+
+**Model settings**, and why:
+
+- `claude-opus-5` at `effort: "low"`. This is short-form chat over a small fixed
+  knowledge base; depth isn't what makes it good, and low effort is roughly a
+  third of the latency.
+- Thinking stays on. With it disabled, Opus 5 occasionally writes a tool call
+  into its visible text instead of emitting a `tool_use` block — here that would
+  be a lead silently never captured.
+- The system prompt is byte-identical every request and carries the only cache
+  breakpoint; the conversation sits after it and doesn't disturb it.
+- `stop_reason: "refusal"` is checked before the content is read, since a
+  refusal arrives as a normal 200.
+
+**Untrusted input.** The client replays its own history, so the server rebuilds
+the shape rather than trusting it: roles narrowed to user/assistant, content
+forced to a string, length and count capped, leading non-user turns dropped. A
+`system` role smuggled into the array would be an operator instruction written
+by a visitor. Per-IP **rate limiting is not in this code** and belongs in the
+host's edge config — a public unauthenticated LLM endpoint is a standing bill.
+Set one before launch.
+
+### 9. The portfolio
+
+The live Recent Work page is one unsorted scroll — a Telstra TVC, a recruitment
+website and a pizza shop's social campaign stacked in whatever order they were
+added. Someone who wants to see websites reads past nine video projects to find
+the two that are theirs, and mostly doesn't.
+[src/ui/Work.jsx](src/ui/Work.jsx) is the same ten jobs with a filter over them.
+
+**A job can be several kinds.** Monford was the website, the social accounts and
+the video; it belongs under all three, and splitting it into three cards to make
+the filter tidier would misrepresent what was done. So `kinds` is a list and
+filtering is a has-this-tag test. Counts ride inside each chip, so nobody
+presses a filter and is surprised by what comes back.
+
+**These cards do not carry `data-reveal`.** That observer is set up once over the
+nodes present at mount — a card rendered after a filter change is never observed
+and would sit at `opacity: 0` forever. They animate themselves instead, and the
+grid is keyed on the active filter so the whole set replays its entrance when
+you change it. That is not decoration: the page doesn't scroll when you filter,
+so without it the only evidence anything happened is a number changing.
+
+**Two honest gaps**, both deliberate:
+
+- **No artwork.** Nothing has stills yet. `image` is the slot; until it is
+  filled a card renders the client's name at display size rather than a grey
+  rectangle apologising for itself — which is what a prospect is scanning for
+  anyway.
+- **No signage case study.** SocialHat runs screens across Perth and has a
+  client on record crediting them, but there is no signage write-up anywhere on
+  the current site to carry across. The filter stays, because hiding a service
+  they sell would imply they don't, and it shows a designed empty state that
+  says the work exists and the write-up doesn't, with a route to ask.
+
+Nothing in the copy claims a result — no view counts, no lead numbers, no
+awards. A case study asserting something the business can't stand behind is
+worse than one that just says what was made.
+
+### 10. The feed, and the polish
+
+**The feed.** A social media agency whose own site shows no social quietly
+undercuts everything else on the page.
+[src/ui/Feed.jsx](src/ui/Feed.jsx) draws the grid;
+[api/instagram.js](api/instagram.js) fetches it. It goes through the server for
+two reasons: Instagram's tokens are long-lived bearer credentials for the
+account, so a widget holding one in the page hands it to anyone who opens
+devtools; and Instagram rate-limits per token, not per visitor, so a page
+fetching directly spends the account's quota on however many people are reading.
+One cached call (15 min in-process, plus `s-maxage` at the CDN) serves everyone.
+
+The failure mode matters more here than anywhere else, because a broken feed
+proves the opposite of what the feed was put there to prove. There is exactly
+one thing it renders when it has no posts for any reason — a card pointing at
+the real account. Always the last cell of the grid, never conditional, so with
+posts it is the way out and without them it is the section. `stale-while-revalidate`
+means an expired token degrades to an old feed rather than an empty one — worth
+knowing, since Instagram's long-lived tokens expire at 60 days and will go wrong
+quietly two months after setup.
+
+**Speed.**
+
+- **Plain Barlow was being downloaded by every visitor and used by nothing.**
+  Three weights in two formats; `styles.css` names only "Barlow Condensed".
+  Removed — about 126KB of font off every first load.
+- **three / fiber / drei now build to their own chunk** (966KB) separate from the
+  site's code (236KB). This does not shrink the first visit; it means a copy
+  edit no longer expires a megabyte of library that a returning visitor already
+  had. Note rolldown — Vite 8's bundler — accepts only the *function* form of
+  `manualChunks`; the object form throws at build time.
+- **A pre-boot curtain in [index.html](index.html).** Everything is React and
+  React arrives behind three.js, so `#root` was empty and the first thing a
+  visitor saw was a white screen until that parsed. The curtain is plain HTML
+  with inline CSS, painting on the browser's first frame with nothing to fetch.
+  It is removed from an effect in [App.jsx](src/App.jsx), not from the line
+  after `render()` — `createRoot().render()` *schedules* the work rather than
+  performing it, so the next statement can run before a single node is in the
+  document and would pull the curtain to expose an empty `#root`. Its colours
+  are the film's `--bg`/`--ink`, hard-coded, and have to stay in step with
+  styles.css or the handover to the app's own loader flashes.
+
+**SEO.** The head had a real bug: `og:image` was `/images/socialhat-mark.jpg` —
+a path, not a URL — which every crawler resolves against its own host and none
+of them find, so the site has been sharing with no image at all. Now absolute,
+alongside `canonical`, `og:url`, `og:site_name`, `og:locale`, and a title and
+description that name Perth and the services rather than competing on the word
+"studio". The largest addition is **`ProfessionalService` JSON-LD** — address,
+phone, hours, service catalogue, `sameAs` — because a Perth agency is found
+through the local pack and the knowledge panel far more than through a blue
+link, and both are fed by structured data the current site has none of. Plus
+[robots.txt](public/robots.txt) (disallowing `/api/`, which costs money per call)
+and [sitemap.xml](public/sitemap.xml).
+
+The `<meta name="viewport">` has no `maximum-scale` and no `user-scalable=no`,
+which is the fix for F5. It has to stay that way.
+
+### 11. Why the text is DOM, not geometry
 
 Every heading is a real `<h1>`/`<h2>`, every paragraph a real `<p>`, inside a
 `<main>`: selectable, translatable, and crawlable. Verified by SSR-rendering the

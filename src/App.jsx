@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { invalidate } from '@react-three/fiber'
 import { Experience } from './three/Experience'
 import { Story } from './ui/Story'
@@ -43,6 +43,19 @@ export default function App() {
   // loop inside the Canvas, read by the story overlay outside it — so the words
   // are locked to the damped camera time rather than to raw scroll.
   const timelineRef = useRef(0)
+
+  // The pre-boot curtain in index.html has done its job: it held the screen from
+  // the browser's first frame until this bundle parsed, so nobody watched a
+  // white page while three.js downloaded. The app's own loader takes over here.
+  //
+  // Removed from an effect rather than straight after `render()` in main.jsx.
+  // `createRoot().render()` schedules the work, it does not perform it, so the
+  // line after it can run before a single node is in the document — which would
+  // pull the curtain to expose an empty `#root`. An effect runs after the tree
+  // is committed, which is the guarantee this needs.
+  useEffect(() => {
+    document.getElementById('boot')?.remove()
+  }, [])
 
   return (
     <>

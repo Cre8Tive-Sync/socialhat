@@ -1,32 +1,164 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-AU">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- No `maximum-scale`, no `user-scalable=no`. The live site blocks
+         pinch-to-zoom (finding F5); the fix is the absence of those, and it has
+         to stay absent. -->
+    <!-- The film's ground (`--bg` in styles.css), which is what is on screen
+         while the page loads. The site's indigo is a different colour and does
+         not arrive until six viewports of scrolling later. -->
     <meta name="theme-color" content="#08080a" />
 
-    <title>socialhat | Digital Marketing Studio</title>
+    <!--
+      Local intent first.
+
+      SocialHat sells to Perth businesses, and the searches that matter say so:
+      "marketing agency perth", "digital signage perth", "video production
+      perth". The previous title and description named neither the city nor the
+      services, which left the page competing on the word "studio".
+    -->
+    <title>SocialHat | Marketing Agency in Perth — Web, Video, Ads &amp; Digital Signage</title>
     <meta
       name="description"
-      content="socialhat is a digital marketing studio. Brand, campaign and design work that starts with research and strategy, and is built on what demonstrably works."
+      content="SocialHat is a Perth marketing agency in Floreat, WA. Websites, video and photography, Google Ads, social media management and digital signage screens — 15 years, one team, all under one roof."
     />
+    <link rel="canonical" href="https://socialhat.com.au/" />
 
+    <!--
+      Open Graph needs absolute URLs. The image here was previously
+      `/images/socialhat-mark.jpg` — a path, not a URL — which every crawler
+      resolves against its own host and none of them find, so the site has been
+      sharing with no image at all.
+    -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="socialhat | Digital Marketing Studio" />
+    <meta property="og:site_name" content="SocialHat" />
+    <meta property="og:locale" content="en_AU" />
+    <meta property="og:url" content="https://socialhat.com.au/" />
+    <meta
+      property="og:title"
+      content="SocialHat | Marketing Agency in Perth — Web, Video, Ads &amp; Digital Signage"
+    />
     <meta
       property="og:description"
-      content="Brand, campaign and design work that starts with research and strategy, and is built on what demonstrably works."
+      content="Websites, video, Google Ads, social media and digital signage, from a Floreat studio that has been doing it for 15 years."
     />
-    <meta property="og:image" content="/images/socialhat-mark.jpg" />
+    <meta property="og:image" content="https://socialhat.com.au/images/socialhat-mark.jpg" />
+    <meta property="og:image:alt" content="The SocialHat monogram" />
+
     <!-- The mark is square, so the small card is the one that shows it whole;
          a large card centre-crops it to 1.91:1. -->
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:image" content="/images/socialhat-mark.jpg" />
+    <meta name="twitter:image" content="https://socialhat.com.au/images/socialhat-mark.jpg" />
 
     <link rel="icon" type="image/jpeg" href="/images/socialhat-mark.jpg" />
     <link rel="apple-touch-icon" href="/images/socialhat-mark.jpg" />
+
+    <!--
+      LocalBusiness, for the searches that decide this business.
+
+      A Perth agency is found through the local pack and the knowledge panel far
+      more than through a blue link, and both are fed by structured data. This is
+      the single highest-value SEO item on the page and the current site has
+      none of it. Every figure below is from socialhat.com.au — nothing asserted
+      that the business has not already published.
+    -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "ProfessionalService",
+        "@id": "https://socialhat.com.au/#business",
+        "name": "SocialHat",
+        "url": "https://socialhat.com.au/",
+        "image": "https://socialhat.com.au/images/socialhat-mark.jpg",
+        "telephone": "+61892850811",
+        "email": "info@socialhat.com.au",
+        "priceRange": "$$",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "41A Kirwan Street",
+          "addressLocality": "Floreat",
+          "addressRegion": "WA",
+          "postalCode": "6014",
+          "addressCountry": "AU"
+        },
+        "areaServed": { "@type": "City", "name": "Perth" },
+        "openingHoursSpecification": [
+          {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            "opens": "08:00",
+            "closes": "16:00"
+          }
+        ],
+        "sameAs": [
+          "https://www.facebook.com/socialhat/",
+          "https://www.instagram.com/socialhat.media",
+          "https://www.youtube.com/channel/UCCzxGJ2iy8-uyA-4VwaThCA/featured"
+        ],
+        "hasOfferCatalog": {
+          "@type": "OfferCatalog",
+          "name": "Services",
+          "itemListElement": [
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Web development" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Advertising campaigns and Google Ads" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Content creation, video and photography" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Social media management" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Digital signage" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Drone services" } }
+          ]
+        }
+      }
+    </script>
   </head>
   <body>
+    <!--
+      The pre-boot curtain.
+
+      Everything on this page is rendered by React, and React arrives in a
+      bundle that carries three.js. Until it parses, `#root` is empty — so the
+      first thing a visitor on a phone saw was a white screen for as long as
+      that took. This is the same curtain the app shows while the model streams,
+      in plain HTML and inline CSS so it paints on the first frame the browser
+      has, with nothing to fetch first.
+
+      It is removed from an effect in src/App.jsx, once React has committed.
+
+      The colours are the film's, not the site's — `--bg` and `--paper` from
+      styles.css, hard-coded because this has to paint before any stylesheet
+      loads. They have to stay in step with that file: the whole point is that
+      the handover to the app's own loader is invisible, and an indigo curtain
+      handing over to a near-black one is a flash.
+    -->
+    <div id="boot">
+      <style>
+        #boot {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #08080a;
+          color: #f2f2f3;
+          font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+          font-size: 13px;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+        }
+        #boot span { opacity: 0.55; animation: boot-pulse 1.4s ease-in-out infinite; }
+        @keyframes boot-pulse {
+          0%, 100% { opacity: 0.25; }
+          50%      { opacity: 0.7; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          #boot span { animation: none; }
+        }
+      </style>
+      <span>SocialHat</span>
+    </div>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

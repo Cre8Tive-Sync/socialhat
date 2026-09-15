@@ -65,6 +65,65 @@ export const SCROLL_SMOOTHING = 4
 export const PRESERVE_AUTHORED_FRAMING = true
 
 /**
+ * Where the enquiry form POSTs its JSON.
+ *
+ * Empty until the host is decided — the form then falls back to composing the
+ * same payload as a `mailto:` to the inbox its path routes to, so it works and
+ * is testable today without a server. Set this (Netlify/Vercel function,
+ * Formspree, whatever) and the fallback drops out with no other change.
+ */
+export const ENQUIRY_ENDPOINT = ''
+
+/**
+ * Where the assistant talks to [api/chat.js](../api/chat.js).
+ *
+ * Absolute on purpose. `base` is './' so the built page can live under a path,
+ * but the function is always mounted at the origin root by every host that runs
+ * it. Set to '' to leave the assistant off the page entirely — which is what a
+ * static host with no functions should do, rather than shipping a widget whose
+ * every message fails.
+ */
+export const CHAT_ENDPOINT = '/api/chat'
+
+/**
+ * The line in the bubble before anyone has said anything. Not a greeting the
+ * model generates — a fixed first turn costs a request, a second of latency and
+ * a few cents to say the same thing every time.
+ */
+export const CHAT_GREETING =
+  "Hi, I'm HatBot. Ask me anything about what SocialHat does, or just tell me what you're trying to get done, and I'll point you the right way."
+
+/**
+ * The nudge, and how long the visitor gets before it appears.
+ *
+ * The launcher alone is not enough. It reads as a chat button to anyone who
+ * already knows what a chat button is, and as decoration to everyone else —
+ * which on this site is a real share of the audience, since a good number of
+ * SocialHat's prospects are business owners who came looking for a phone
+ * number. So HatBot says something first, in plain words, instead of waiting to
+ * be recognised.
+ *
+ * The delay is long enough to be an offer of help rather than an interruption:
+ * the visitor has read something and is still here. It is measured from the
+ * moment the site takes the screen, not from page load, because the film runs
+ * first and none of that time was spent reading.
+ */
+export const CHAT_NUDGE_DELAY = 14000
+
+export const CHAT_NUDGE = "Hi, I'm HatBot. Got a question? Just ask me."
+
+/**
+ * Where the feed reads from, and where it points.
+ *
+ * Absolute, for the same reason as CHAT_ENDPOINT: `base` is relative but the
+ * function is always mounted at the origin root. Set FEED_ENDPOINT to '' on a
+ * host with no functions — the section then renders the follow card alone,
+ * which is a working link rather than a grid that never fills.
+ */
+export const FEED_ENDPOINT = '/api/instagram'
+export const INSTAGRAM_URL = 'https://www.instagram.com/socialhat.media'
+
+/**
  * Sign-off logo. This is the file you asked for — the #1D1F20 near-black mark.
  * If it disappears against the final shot, swap `-dark` for `-light` here: the
  * light file is the same artwork in #F2F2F3.

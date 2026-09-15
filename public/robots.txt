@@ -1,0 +1,11 @@
+# socialhat.com.au
+
+User-agent: *
+Allow: /
+
+# The API routes are for the page, not for crawlers. Nothing here is secret —
+# this saves the crawl budget and keeps a chat endpoint that costs money per
+# call out of the index.
+Disallow: /api/
+
+Sitemap: https://socialhat.com.au/sitemap.xml

@@ -6,15 +6,15 @@ import App from './App'
 // here comes off a third party: first paint of either half should not wait on
 // someone else's CDN.
 //
-// The film: Condensed carries every beat, label and number over the scene,
-// Barlow is its reading face.
+// The film: Condensed carries every beat, label and number over the scene.
+//
+// Plain Barlow used to be loaded here as its reading face and was never
+// referenced by a single rule — styles.css names only "Barlow Condensed". Three
+// weights, in two formats, downloaded by every visitor and used by nothing.
 import '@fontsource/barlow-condensed/latin-400.css'
 import '@fontsource/barlow-condensed/latin-500.css'
 import '@fontsource/barlow-condensed/latin-600.css'
 import '@fontsource/barlow-condensed/latin-700.css'
-import '@fontsource/barlow/latin-400.css'
-import '@fontsource/barlow/latin-500.css'
-import '@fontsource/barlow/latin-600.css'
 
 // The site: Anton shouts — one weight is all it has — Space Grotesk explains,
 // and Plex Mono handles every kicker, tag and readout.

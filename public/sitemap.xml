@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One page, so one URL.
+
+  The site is a single document — the film and the website are two halves of the
+  same scroll — and the in-page anchors (#work, #services, #enquiry) are not
+  separate URLs and must not be listed as though they were. If this ever becomes
+  several routes, they belong here.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://socialhat.com.au/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

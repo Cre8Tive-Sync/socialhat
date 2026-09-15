@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { MARK_SRC } from '../config'
+import { CHAT_ENDPOINT, MARK_SRC } from '../config'
 import { usePhase } from '../hooks/usePhase'
+import { Assistant } from './Assistant'
+import { Enquiry } from './Enquiry'
+import { Feed } from './Feed'
+import { Work } from './Work'
 
 /**
  * The website the film hands over to.
@@ -54,7 +58,16 @@ export function Site({ style }) {
   }, [])
 
   return (
-    <div className="site" ref={root} style={style}>
+    // `inert` while the film owns the screen, matching the `pointer-events`
+    // gate site.css already applies at exactly the same moment.
+    //
+    // The whole site half is in the DOM from the first frame — that is what
+    // makes it crawlable — but until the handover completes it is transparent
+    // and untouchable. It was still *tabbable* though, so a keyboard visitor
+    // pressing Tab during the film walked an invisible top bar, an invisible
+    // menu and every invisible link below it, with the focus ring landing
+    // nowhere. This puts the tab order back in step with what is on screen.
+    <div className="site" ref={root} style={style} inert={!awake}>
       <div className="grain" aria-hidden="true" />
       {awake && !COARSE ? <Cursor /> : null}
 
@@ -64,12 +77,29 @@ export function Site({ style }) {
         <Masthead awake={awake} />
         <Clients />
         <Services awake={awake} />
+        <Work />
         <Numbers />
+        <Feed />
         <Crew />
         <Ask />
+        <Enquiry />
       </main>
 
       <SiteFooter />
+
+      {/* Mounted for the life of the page, not gated on `awake`.
+          `data-phase` is derived from scroll position on every frame, so it goes
+          back to `scene` when someone scrolls up — and unmounting on that took
+          a visitor mid-conversation with HatBot, threw away the transcript and
+          aborted the request in flight, then handed them a blank chat on the
+          way back down. It does not need the gate: it lives inside `.site`,
+          which is transparent and pointer-events-none until the site owns the
+          screen. `awake` only starts the nudge timer.
+
+          Still gated on there being an endpoint, so a static deploy ships no
+          widget rather than one that fails on every message. */}
+      {CHAT_ENDPOINT ? <Assistant awake={awake} /> : null}
+
       <Console />
     </div>
   )
@@ -767,7 +797,10 @@ function Ticker({ items, tone = '', reverse = false, tilt }) {
 
 function Clients() {
   return (
-    <section className="clients-band" id="work">
+    // `#work` now belongs to the portfolio below, which is what anyone
+    // following a link called Work is actually after. The logo band keeps its
+    // own anchor.
+    <section className="clients-band" id="clients">
       <Ticker items={CLIENTS_A} tone="alt" tilt={1.2} />
       <Ticker items={CLIENTS_B} tilt={-1.2} reverse />
     </section>
@@ -1063,8 +1096,8 @@ function Ask() {
           right people.
         </p>
         <div className="cta-actions">
-          <a className="btn" href="mailto:info@socialhat.com.au" onClick={burstFrom} {...MAGNETIC}>
-            info@socialhat.com.au
+          <a className="btn" href="#enquiry" onClick={burstFrom} {...MAGNETIC}>
+            Start an enquiry
           </a>
           <a className="btn outline" href="tel:0892850811" onClick={burstFrom} {...MAGNETIC}>
             08 9285 0811
@@ -1113,7 +1146,8 @@ function SiteFooter() {
             <div className="footer-col">
               <h4>Studio</h4>
               <a href="#about">About</a>
-              <a href="#work">Clients</a>
+              <a href="#work">Recent work</a>
+              <a href="#clients">Clients</a>
               <a href="#contact">Contact</a>
             </div>
             <div className="footer-col">
