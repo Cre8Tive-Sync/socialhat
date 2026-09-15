@@ -156,5 +156,5 @@ export function useHeroScroll(heroRef, onSceneMove) {
     }
   }, [heroRef])
 
-  return { progress, handoff }
+  return { progress }
 }

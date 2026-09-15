@@ -6,12 +6,12 @@
  * frame ranges from the brief are converted to milliseconds here, so every
  * timing below is expressed in ms against that same 7041.67ms timeline.
  */
-export const FPS = 24
+const FPS = 24
 
-export const frameToMs = (frame) => (frame / FPS) * 1000
+const frameToMs = (frame) => (frame / FPS) * 1000
 
 /** Frames of crossfade on either side of a beat's fully-visible window. */
-export const FADE_FRAMES = 8
+const FADE_FRAMES = 8
 
 /**
  * `frames` is the window where the beat sits at full opacity; the fade happens
