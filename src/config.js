@@ -71,3 +71,9 @@ export const PRESERVE_AUTHORED_FRAMING = true
  */
 export const LOGO_SRC = `${import.meta.env.BASE_URL}images/socialhat_logo-dark.svg`
 export const LOGO_ALT = 'socialhat'
+
+/**
+ * The brand mark — the SH monogram badge, cream on the indigo ground. Square
+ * and self-contained, so it doubles as the favicon and the share card image.
+ */
+export const MARK_SRC = `${import.meta.env.BASE_URL}images/socialhat-mark.jpg`

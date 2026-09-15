@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { MARK_SRC } from '../config'
 import { usePhase } from '../hooks/usePhase'
 
 /**
@@ -417,7 +418,9 @@ function Logo({ greet = false }) {
 
   return (
     <a className="logo" href="#top" onMouseEnter={REDUCED ? undefined : play}>
-      <span className="dot" aria-hidden="true" />
+      <span className="mark" aria-hidden="true">
+        <img src={MARK_SRC} alt="" width="34" height="34" decoding="async" />
+      </span>
       <span className={bouncing ? 'logo-text bounce' : 'logo-text'}>
         {LETTERS.map((letter, i) => (
           // Index as key: the string is a constant, and the position is exactly

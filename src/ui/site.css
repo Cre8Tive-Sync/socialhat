@@ -205,28 +205,40 @@
   letter-spacing: 0.5px;
 }
 
-.site .logo .dot {
+/* The brand mark. A self-contained badge — the cream monogram sits on an
+   indigo ground a shade off the site's own — so it needs no plate behind it,
+   only the corner radius the artwork was drawn with. */
+.site .logo .mark {
   position: relative;
+  flex: none;
   display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--coral);
+  width: 34px;
+  height: 34px;
 }
 
-/* the heartbeat */
-.site .logo .dot::after {
+.site .logo .mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+/* The heartbeat, inherited from the dot this replaced. It traces the badge now
+   rather than a 10px circle, which is also why the ring travels less: a
+   badge-sized ring on the old 1.8x scale would ride out over the nav. */
+.site .logo .mark::after {
   content: "";
   position: absolute;
-  inset: -4px;
+  inset: -3px;
   border: 1.5px solid var(--coral);
-  border-radius: 50%;
+  border-radius: 11px;
+  pointer-events: none;
   animation: sh-pulse-ring 1.4s cubic-bezier(0.3, 0.6, 0.4, 1) infinite;
 }
 
 @keyframes sh-pulse-ring {
-  0%   { transform: scale(0.6); opacity: 0.9; }
-  70%  { transform: scale(1.8); opacity: 0; }
+  0%   { transform: scale(0.94); opacity: 0.9; }
+  70%  { transform: scale(1.22); opacity: 0; }
   100% { opacity: 0; }
 }
 
@@ -1427,7 +1439,7 @@
   .site .menu-stagger { opacity: 1; transform: none; }
   .site .menu.open .menu-stagger { transition-delay: 0s; }
 
-  .site .logo .dot::after,
+  .site .logo .mark::after,
   .site .masthead h1.glitching,
   .site .masthead h1.glitching .accent,
   .site .rec-dot i,
