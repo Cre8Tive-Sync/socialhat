@@ -3,6 +3,9 @@ dist
 .DS_Store
 *.local
 
+# API keys. .env.example is the committed template.
+.env
+
 # Generated from scene.gltf by `npm run pack-model`
 public/models/scene.glb
 

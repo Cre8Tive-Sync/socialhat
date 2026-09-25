@@ -15,11 +15,19 @@ npm run dev
 `predev` packs the model automatically the first time, so `npm run dev` is all
 you need from a clean checkout.
 
-The assistant (§8) needs a key. Without one the site runs and the widget
-degrades to a handoff; with one it works in dev exactly as in production:
+The assistant (§8) needs an OpenRouter key. Without one the site runs and the
+widget degrades to a handoff; with one it works in dev exactly as in production.
+Put it in `.env` (copy `.env.example`; `.env` is gitignored), or set it in the
+shell:
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... npm run dev
+OPENROUTER_API_KEY=sk-or-... npm run dev
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:OPENROUTER_API_KEY = "sk-or-..."; npm run dev
 ```
 
 ## How it works
@@ -282,10 +290,14 @@ never leaves the function.
 returns a streaming SSE `Response`, which is the shape Vercel Edge, Netlify
 Functions v2 and Cloudflare Workers all accept.
 [vite-api-plugin.js](vite-api-plugin.js) adapts Connect's `(req, res)` to that
-same file in `npm run dev`, so there is one implementation and no mock. Set
-`ANTHROPIC_API_KEY`; without it the endpoint streams a handoff to the form and
+same file in `npm run dev`, so there is one implementation and no mock.
+
+The model is reached through [OpenRouter](https://openrouter.ai), in its
+OpenAI-compatible chat completions format, with plain `fetch` — no SDK. Set
+`OPENROUTER_API_KEY`; without it the endpoint streams a handoff to the form and
 the phone number rather than 500ing, so a keyless deploy degrades instead of
-breaking.
+breaking. `OPENROUTER_MODEL` picks the model (default `anthropic/claude-opus-5`)
+— any tool-calling model on OpenRouter works without a code change.
 
 **Two tools.** `capture_lead` records an enquiry (POSTed to `LEAD_WEBHOOK`, or
 logged with the model told plainly it wasn't delivered, so it never tells a
@@ -296,15 +308,18 @@ than a blank one.
 
 **Model settings**, and why:
 
-- `claude-opus-5` at `effort: "low"`. This is short-form chat over a small fixed
-  knowledge base; depth isn't what makes it good, and low effort is roughly a
-  third of the latency.
-- Thinking stays on. With it disabled, Opus 5 occasionally writes a tool call
-  into its visible text instead of emitting a `tool_use` block — here that would
-  be a lead silently never captured.
+- `anthropic/claude-opus-5` at `reasoning: { effort: "low" }`. This is
+  short-form chat over a small fixed knowledge base; depth isn't what makes it
+  good, and low effort is roughly a third of the latency.
+- Reasoning stays on. With it disabled, Opus 5 occasionally writes a tool call
+  into its visible text instead of making one — here that would be a lead
+  silently never captured. Its `reasoning_details` are sent back with the turn
+  that made a tool call, because Anthropic models reject a tool result without
+  them.
 - The system prompt is byte-identical every request and carries the only cache
-  breakpoint; the conversation sits after it and doesn't disturb it.
-- `stop_reason: "refusal"` is checked before the content is read, since a
+  breakpoint (`cache_control`, passed through by OpenRouter); the conversation
+  sits after it and doesn't disturb it.
+- A `content_filter` finish is checked before the content is trusted, since a
   refusal arrives as a normal 200.
 
 **Untrusted input.** The client replays its own history, so the server rebuilds

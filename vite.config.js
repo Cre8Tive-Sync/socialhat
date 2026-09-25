@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { apiRoutes } from './vite-api-plugin.js'
 
@@ -17,6 +17,15 @@ const modelPath = path.join(root, 'public', 'models', 'scene.glb')
 const modelMB = fs.existsSync(modelPath)
   ? Math.round(fs.statSync(modelPath).size / 1024 / 1024)
   : 0
+
+// The api/ handlers read their secrets from process.env, which is what every
+// host provides in production. Vite only exposes .env to the *browser*, and
+// only VITE_-prefixed names, so for `npm run dev` the file is copied onto
+// process.env here instead — server-side, never into the bundle. A variable
+// already set in the shell wins over the file.
+for (const [name, value] of Object.entries(loadEnv('development', root, ''))) {
+  process.env[name] ??= value
+}
 
 export default defineConfig({
   // apiRoutes serves api/chat.js from the dev server; it is `apply: 'serve'`, so

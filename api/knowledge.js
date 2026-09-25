@@ -148,6 +148,7 @@ info@socialhat.com.au and 08 9285 0811.
 export const SYSTEM_PROMPT = [FACTS, VOICE, GOAL].join('\n').trim()
 
 /**
+ * OpenAI function format, which is what OpenRouter takes for every model.
  * `strict: true` throughout, so the arguments are schema-valid when they arrive
  * and the handler does not have to defend against a missing `name`.
  */
@@ -157,7 +158,7 @@ export const TOOLS = [
     description:
       "Record an enquiry so the team picks it up next business morning. Call this once you have the visitor's name and at least one of email or phone, and a rough idea of what they want. Call it once per conversation. Tell the visitor afterwards that it is with the team — do not say a person has seen it.",
     strict: true,
-    input_schema: {
+    parameters: {
       type: 'object',
       properties: {
         name: { type: 'string', description: "The visitor's name." },
@@ -185,7 +186,7 @@ export const TOOLS = [
     description:
       "Scroll the visitor to the enquiry form on this page and preselect their path, so it opens showing only the questions that apply to them. Use it when they would rather type into a form than chat, or when what they are describing needs more detail than a chat box suits. Tell them you've opened it.",
     strict: true,
-    input_schema: {
+    parameters: {
       type: 'object',
       properties: {
         path: { type: 'string', enum: PATHS, description: 'Which path to preselect.' },
@@ -194,4 +195,4 @@ export const TOOLS = [
       additionalProperties: false,
     },
   },
-]
+].map((fn) => ({ type: 'function', function: fn }))
