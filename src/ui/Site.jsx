@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CHAT_ENDPOINT, MARK_SRC } from '../config'
-import { usePhase } from '../hooks/usePhase'
+import { useLive, usePhase } from '../hooks/usePhase'
 import { Assistant } from './Assistant'
 import { Enquiry } from './Enquiry'
-import { Feed } from './Feed'
 import { Work } from './Work'
 
 /**
@@ -27,6 +26,8 @@ import { Work } from './Work'
 export function Site({ style }) {
   const root = useRef(null)
   const awake = usePhase() === 'site'
+  // Takes input slightly before `awake`: see LIVE_AT in useHeroScroll.
+  const live = useLive()
 
   // Sections lift into place the first time they are reached, once each.
   //
@@ -67,7 +68,7 @@ export function Site({ style }) {
     // pressing Tab during the film walked an invisible top bar, an invisible
     // menu and every invisible link below it, with the focus ring landing
     // nowhere. This puts the tab order back in step with what is on screen.
-    <div className="site" ref={root} style={style} inert={!awake}>
+    <div className="site" ref={root} style={style} inert={!live}>
       <div className="grain" aria-hidden="true" />
       {awake && !COARSE ? <Cursor /> : null}
 
@@ -79,7 +80,11 @@ export function Site({ style }) {
         <Services awake={awake} />
         <Work />
         <Numbers />
-        <Feed />
+        {/* The Instagram feed (./Feed) is off the page: GitHub Pages cannot run
+            api/instagram.js, so it could only ever show its lone follow card.
+            The account is still linked from the footer. To restore it, host
+            somewhere that runs the api/ functions, set INSTAGRAM_TOKEN, and put
+            <Feed /> back here along with its import. */}
         <Crew />
         <Ask />
         <Enquiry />
@@ -521,8 +526,13 @@ function Masthead({ awake }) {
           </a>
         </div>
 
-        <VectorTool />
-        <Palette />
+        {/* One column, laid out by flow and a gap — not two boxes positioned
+            separately. The loop scales with the viewport, so any fixed offset
+            for the swatches is only right at one width and collides at others. */}
+        <div className="masthead-toys">
+          <VectorTool />
+          <Palette />
+        </div>
       </div>
 
       <Ticker items={SERVICES.map((service) => service.title)} />
@@ -546,8 +556,27 @@ const VT = {
   snap: 10,
 }
 
-const OPEN_HINT = '// unfinished. drag the loose end to close the loop'
-const CLOSED_HINT = '// there it is. bet i made ya stop scrolling'
+// Written as code comments, one thought a line. The open hint names the two
+// pieces by what they look like, since "the loose end" means nothing to
+// someone who has not worked out which end is loose.
+const OPEN_HINT = ['unfinished loop.', 'drag the orange dot onto the green square.']
+const CLOSED_HINT = ['loop closed. nice work.', 'bet that made you stop scrolling.']
+const PALETTE_HINT = ['the house colours.', 'click one to copy its hex.']
+
+/** A comment block: each line gets its own `//`, drawn separately so it can be
+    coloured apart from the words and is not read out by a screen reader. */
+function CodeComment({ lines, className = '', ...rest }) {
+  return (
+    <p className={`code-comment ${className}`.trim()} {...rest}>
+      {lines.map((line) => (
+        <span key={line}>
+          <i aria-hidden="true">// </i>
+          {line}
+        </span>
+      ))}
+    </p>
+  )
+}
 
 const pointOn = (deg) => {
   const rad = (deg * Math.PI) / 180
@@ -717,7 +746,11 @@ function VectorTool() {
           </tspan>
         </text>
       </svg>
-      <p className={won ? 'vt-hint won' : 'vt-hint'}>{won ? CLOSED_HINT : OPEN_HINT}</p>
+      <CodeComment
+        className={won ? 'vt-hint won' : 'vt-hint'}
+        lines={won ? CLOSED_HINT : OPEN_HINT}
+        aria-live="polite"
+      />
     </div>
   )
 }
@@ -753,21 +786,24 @@ function Palette() {
   }
 
   return (
-    <div className="palette-row">
-      {SWATCHES.map(([token, hex]) => (
-        <button
-          className="swatch"
-          type="button"
-          key={token}
-          style={{ background: `var(--${token})` }}
-          aria-label={`Copy ${hex}`}
-          onClick={() => copy(hex)}
-        >
-          <span className={copied === hex ? 'swatch-tip copied' : 'swatch-tip'}>
-            {copied === hex ? 'Copied' : hex}
-          </span>
-        </button>
-      ))}
+    <div className="palette">
+      <CodeComment className="palette-hint" lines={PALETTE_HINT} />
+      <div className="palette-row">
+        {SWATCHES.map(([token, hex]) => (
+          <button
+            className="swatch"
+            type="button"
+            key={token}
+            style={{ background: `var(--${token})` }}
+            aria-label={`Copy ${hex}`}
+            onClick={() => copy(hex)}
+          >
+            <span className={copied === hex ? 'swatch-tip copied' : 'swatch-tip'}>
+              {copied === hex ? 'Copied' : hex}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

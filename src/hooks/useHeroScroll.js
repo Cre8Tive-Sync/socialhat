@@ -4,6 +4,13 @@ import { HANDOFF_SMOOTHING, HANDOFF_START } from '../config'
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v)
 
 /**
+ * How far through the handover the site starts taking clicks. Its opacity
+ * reaches 1 at a *damped* reveal of 0.6, so this sits past that with room for
+ * the damping to catch up — nothing is clickable before it is fully visible.
+ */
+const LIVE_AT = 0.75
+
+/**
  * Scroll, measured against the pinned hero rather than the whole document.
  *
  * The page is two things stacked: a film, then a website. Reading document
@@ -118,6 +125,16 @@ export function useHeroScroll(heroRef, onSceneMove) {
       // would jump the page by whatever was left of the handover.
       const phase = handoff.current >= 1 ? 'site' : handoff.current > 0 ? 'handoff' : 'scene'
       if (root.dataset.phase !== phase) root.dataset.phase = phase
+
+      // Separately: whether the site takes clicks. It is fully opaque and held
+      // still well before the handover completes, and waiting for the exact
+      // `site` frame left the last stretch of it looking finished but dead —
+      // stop scrolling there and nothing on screen answered a click.
+      const live = handoff.current >= LIVE_AT
+      if ((root.dataset.live === '') !== live) {
+        if (live) root.dataset.live = ''
+        else delete root.dataset.live
+      }
 
       // Only when the camera actually has somewhere new to be. The scene is on
       // demand: it renders when this says so and idles the rest of the time, so

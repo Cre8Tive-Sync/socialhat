@@ -85,8 +85,12 @@
 [data-phase="site"] .site {
   transform: none;
   opacity: 1;
-  pointer-events: auto;
 }
+
+/* Clicks come on with `data-live`, set once the site is fully visible — partway
+   through the handover, not at its last frame. Held still by the translate
+   above, so what is under the pointer is exactly what is drawn there. */
+[data-live] .site { pointer-events: auto; }
 
 @media (prefers-reduced-motion: reduce) {
   /* The hold stays — it is geometry, not decoration. The growth goes. */
@@ -583,14 +587,23 @@
 /* ---------- vector tool ----------
    The one thing on this page that is a toy: an unfinished bezier loop with a
    loose end. Drag it back onto the anchor and the shape closes. */
-.site .vector-tool {
+/* The loop and the palette share one column in the masthead's right side, and
+   the gap between them is flow, so it holds at every width the loop scales to. */
+.site .masthead-toys {
   position: absolute;
   top: -16px;
-  right: 0;
+  /* The wrap's own side padding, so the swatches end on the same line as the
+     nav's button and every section below, not out in the gutter. */
+  right: clamp(20px, 5vw, 64px);
   z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 34px;
   width: min(36vw, 400px);
-  opacity: 0.95;
 }
+
+.site .vector-tool { width: 100%; opacity: 0.95; }
 
 .site .vector-tool svg {
   display: block;
@@ -601,17 +614,41 @@
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cline x1='5' y1='19' x2='15' y2='9' stroke='%23150E38' stroke-width='3' stroke-linecap='round'/%3E%3Cline x1='5' y1='19' x2='15' y2='9' stroke='%23CFFF4D' stroke-width='1.3' stroke-linecap='round'/%3E%3Cpath d='M13 3 L21 3 L21 11 L17 7 Z' fill='%23CFFF4D' stroke='%23150E38' stroke-width='1'/%3E%3Ccircle cx='5' cy='19' r='2' fill='%23FF3B5C' stroke='%23150E38' stroke-width='0.8'/%3E%3C/svg%3E") 5 19, crosshair;
 }
 
-.site .vt-hint {
-  margin: 6px 4px 0 0;
-  color: rgb(251 242 228 / 0.45);
+/* Comments, set like a code editor would: one per line, the slashes in the
+   syntax colour and dimmer than the words, so the words are what you read. */
+.site .code-comment {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: rgb(251 242 228 / 0.68);
   font-family: var(--ff-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.04em;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
   text-align: right;
   transition: color 0.3s ease;
 }
 
+.site .code-comment i {
+  color: var(--lime);
+  font-style: normal;
+  opacity: 0.6;
+}
+
+/* The loop's drawing is a 300-unit square with the circle's lowest point at
+   240, so the bottom fifth of the SVG is empty. A percentage margin resolves
+   against the column's width — which is the SVG's width — so -20% removes
+   exactly that band at every size, and the hint sits just under the loop. */
+.site .vt-hint { margin-top: calc(-20% + 16px); }
+
+/* Comment lines never wrap: a comment broken mid-phrase reads like a bug.
+   max-content lets a long line reach left past the column instead. */
+.site .code-comment { width: max-content; white-space: nowrap; }
+.site .vt-hint { margin-left: auto; }
+
+/* Closed: the whole comment turns lime, slashes at full strength. */
 .site .vt-hint.won { color: var(--lime); }
+.site .vt-hint.won i { opacity: 1; }
 
 .site .vt-full {
   fill: none;
@@ -689,17 +726,19 @@
 .site .vt-hit:focus-visible + .vt-node { stroke: var(--paper); transform: scale(1.25); }
 
 /* ---------- palette ----------
-   Sits under the vector tool: same column, same width, one gap below the hint.
-   The offset is the tool's own top plus its maximum height. */
+   Under the vector tool in the same column: its own comment, then the
+   swatches. The tips pop upward, so the comment keeps a clear line above. */
+.site .palette {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
+
 .site .palette-row {
-  position: absolute;
-  top: calc(-16px + 400px + 22px);
-  right: 0;
-  z-index: 5;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  width: min(36vw, 400px);
 }
 
 .site .swatch {
@@ -737,22 +776,25 @@
 .site .swatch-tip.copied { background: var(--lime); }
 
 @media (max-width: 1024px) {
-  .site .vector-tool { opacity: 0.55; }
-  .site .palette-row { opacity: 0.6; }
+  .site .masthead-toys { opacity: 0.6; }
+  .site .vector-tool { opacity: 1; }
 }
 
-@media (max-width: 760px) {
-  .site .vector-tool,
-  .site .palette-row {
+/* Stacked under the buttons, centred. From 900px down the right-hand column is
+   too narrow to sit beside the copy without touching it. */
+@media (max-width: 900px) {
+  .site .masthead-toys {
     position: static;
+    align-items: center;
     width: 100%;
     max-width: 420px;
-    margin: 36px auto 0;
-    opacity: 0.85;
+    margin: 40px auto 56px;
+    opacity: 0.9;
   }
 
-  .site .vt-hint { text-align: center; }
-  .site .palette-row { justify-content: center; margin-top: 14px; }
+  .site .palette { align-items: center; }
+  .site .code-comment { text-align: center; }
+  .site .vt-hint { margin-right: auto; }
 }
 
 /* ---------- tickers ----------
@@ -1254,7 +1296,30 @@
 .site .cta-band .btn.outline:hover { background: var(--ink); color: var(--coral); }
 
 /* ---------- footer ---------- */
-.site footer { padding: 70px 0 40px; }
+/* The footer is its own colour, so the page visibly ends rather than trailing
+   off into more of the same dark ground. Coral with ink type — the brand's
+   lead colour, and the same pairing as the "Ask" band above the form. The four
+   variables are the whole scheme: --foot-bg takes lime or marigold just as
+   well, since all three shouts carry ink type. */
+.site footer {
+  --foot-bg: var(--coral);
+  --foot-ink: var(--ink);
+  --foot-soft: rgb(21 14 56 / 0.72);
+  --foot-line: rgb(21 14 56 / 0.18);
+
+  padding: 70px 0 40px;
+  /* Coral sweeping into marigold, the two warm shouts. Both carry ink type,
+     so the text reads the same at either end. --foot-bg stays the solid coral
+     underneath: it is also used as a fill colour (the social icons' hover,
+     the selection), and a gradient is not a colour. */
+  background:
+    radial-gradient(60% 90% at 100% 100%, rgb(255 182 39 / 0.9), transparent 70%),
+    linear-gradient(115deg, var(--coral) 0%, #ff5147 45%, var(--marigold) 100%);
+  background-color: var(--foot-bg);
+  color: var(--foot-ink);
+}
+
+.site footer ::selection { background: var(--ink); color: var(--foot-bg); }
 
 .site .footer-top {
   display: flex;
@@ -1262,7 +1327,7 @@
   justify-content: space-between;
   gap: 40px;
   padding-bottom: 44px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--foot-line);
   margin-bottom: 30px;
 }
 
@@ -1270,7 +1335,7 @@
 
 .site .footer-brand p {
   max-width: 320px;
-  color: rgb(251 242 228 / 0.7);
+  color: var(--foot-soft);
   font-size: 0.95rem;
   line-height: 1.5;
 }
@@ -1279,30 +1344,42 @@
 
 .site .footer-col h4 {
   margin-bottom: 16px;
-  color: var(--lime);
+  color: var(--foot-ink);
   font-family: var(--ff-mono);
   font-size: 0.75rem;
-  font-weight: 400;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
+/* Hover is an underline, not a colour change: neither of the other shouts is
+   readable on coral, so the colour stays and the line says "link". */
 .site .footer-col a {
   display: block;
+  width: fit-content;
   margin-bottom: 10px;
-  color: rgb(251 242 228 / 0.85);
+  color: var(--foot-soft);
   font-size: 0.92rem;
-  transition: color 0.2s ease;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 4px;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
 }
 
-.site .footer-col a:hover { color: var(--coral); }
+.site .footer-col a:hover,
+.site .footer-col a:focus-visible {
+  color: var(--foot-ink);
+  text-decoration-color: currentColor;
+}
+
+.site footer a:focus-visible { outline: 2px solid var(--foot-ink); outline-offset: 3px; }
 
 .site .footer-bottom {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
-  color: rgb(251 242 228 / 0.5);
+  color: var(--foot-soft);
   font-family: var(--ff-mono);
   font-size: 0.75rem;
 }
@@ -1315,14 +1392,15 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--foot-line, var(--line));
   border-radius: 50%;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.site .socials a:hover { background: var(--lime); border-color: var(--lime); }
-.site .socials svg { width: 16px; height: 16px; fill: var(--paper); }
-.site .socials a:hover svg { fill: var(--ink); }
+/* Inverts on hover: an ink disc with the footer's own colour cut out of it. */
+.site .socials a:hover { background: var(--foot-ink, var(--lime)); border-color: var(--foot-ink, var(--lime)); }
+.site .socials svg { width: 16px; height: 16px; fill: var(--foot-ink, var(--paper)); }
+.site .socials a:hover svg { fill: var(--foot-bg, var(--ink)); }
 
 /* ---------- console ----------
    The tag in the corner, and what it opens. For anyone who reads the source. */
@@ -1539,11 +1617,110 @@
   text-transform: uppercase;
 }
 
-.site .work-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+/* The track scrolls on its own, so it clips vertically too — the padding is
+   room for a card's hover lift and its border, which would otherwise be cut
+   off at the top edge. The scrollbar is hidden because the progress bar under
+   it says the same thing in the site's own colours. */
+.site .work-track {
+  display: flex;
   gap: 20px;
+  padding: 6px 2px 10px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  /* Matches the side padding, so the first card snaps to rest at scrollLeft 0
+     and the "at the start" test is exact. */
+  scroll-padding-inline: 2px;
+  scrollbar-width: none;
 }
+
+.site .work-track::-webkit-scrollbar { display: none; }
+
+.site .work-track:focus-visible { outline: 2px solid var(--lime); outline-offset: 4px; border-radius: 20px; }
+
+/* Three across on a desktop, and a peek of the next on a phone so it is
+   obvious there is more to the side. */
+.site .work-track > .work-card {
+  flex: 0 0 calc((100% - 40px) / 3);
+  scroll-snap-align: start;
+}
+
+@media (max-width: 1020px) {
+  .site .work-track > .work-card { flex-basis: calc((100% - 20px) / 2); }
+}
+
+@media (max-width: 640px) {
+  .site .work-track > .work-card { flex-basis: 86%; }
+}
+
+/* The count on the left, the arrows on the right, one row above the cards. */
+.site .work-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.site .work-bar .work-count { margin-bottom: 0; }
+
+.site .work-arrows { display: flex; gap: 10px; }
+
+.site .work-progress {
+  position: relative;
+  height: 2px;
+  margin-top: 18px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.site .work-progress span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 2px;
+  background: var(--lime);
+}
+
+.site .work-arrow {
+  position: relative;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--paper);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+/* A chevron drawn from two borders, pointing right; .prev turns it round. */
+.site .work-arrow::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-top: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  transform: translate(-65%, -50%) rotate(45deg);
+}
+
+.site .work-arrow.prev::after { transform: translate(-35%, -50%) rotate(-135deg); }
+
+.site .work-arrow:hover:not(:disabled),
+.site .work-arrow:focus-visible {
+  border-color: var(--lime);
+  background: var(--lime);
+  color: var(--ink);
+}
+
+.site .work-arrow:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
+
+.site .work-arrow:disabled { opacity: 0.3; cursor: default; }
 
 .site .work-card {
   display: flex;
@@ -1581,19 +1758,76 @@
   overflow: hidden;
 }
 
-.site .work-shot img { width: 100%; height: 100%; object-fit: cover; }
+/* Stills and players fill the frame edge to edge; the padding was only ever
+   for the typographic stand-in these replaced. */
+.site .work-shot img,
+.site .work-shot iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+}
 
-/* Until there is artwork, the client's name at size — which is what someone
-   scanning this grid is looking for anyway, so the placeholder does the job
-   the photograph would have. */
-.site .work-shot span {
-  font-family: var(--ff-display);
-  font-size: clamp(1.4rem, 3.4vw, 2rem);
-  line-height: 1;
-  text-align: center;
-  text-transform: uppercase;
-  color: rgb(251 242 228 / 0.28);
-  letter-spacing: 0.01em;
+/* The website screenshots are pages, so their top edge is the part that says
+   whose site it is — the logo and the navigation. */
+.site .work-shot:not(.is-video) img { object-position: top; }
+
+/* A still that plays. Reset to a plain box so the button reads as the image,
+   and the play mark is the only thing that says it is a button. */
+.site button.work-shot {
+  width: 100%;
+  padding: 0;
+  border-width: 0 0 1px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.site .work-play {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgb(21 14 56 / 0.62);
+  border: 1px solid rgb(251 242 228 / 0.4);
+  backdrop-filter: blur(4px);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.site .work-play::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 54%;
+  transform: translate(-50%, -50%);
+  border-style: solid;
+  border-width: 11px 0 11px 18px;
+  border-color: transparent transparent transparent var(--paper);
+}
+
+.site button.work-shot:hover .work-play,
+.site button.work-shot:focus-visible .work-play {
+  background: var(--lime);
+  transform: scale(1.06);
+}
+
+.site button.work-shot:hover .work-play::after,
+.site button.work-shot:focus-visible .work-play::after {
+  border-left-color: var(--ink);
+}
+
+.site button.work-shot:focus-visible { outline: 2px solid var(--lime); outline-offset: -2px; }
+
+/* Monford's list of services, as it was on the old page. */
+.site .work-points {
+  display: grid;
+  gap: 5px;
+  padding-left: 1.1em;
+  color: rgb(251 242 228 / 0.68);
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 
 .site .work-body { display: flex; flex-direction: column; gap: 9px; padding: 18px 18px 20px; flex: 1; }
@@ -1608,40 +1842,12 @@
   text-transform: uppercase;
 }
 
-.site .work-scale {
-  flex-shrink: 0;
-  color: var(--marigold);
-  font-family: var(--ff-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
 .site .work-title { color: var(--lime); font-size: 0.98rem; font-weight: 500; line-height: 1.3; }
 
 .site .work-blurb {
   color: rgb(251 242 228 / 0.68);
   font-size: 0.92rem;
   line-height: 1.5;
-}
-
-.site .work-services {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: auto;
-  padding-top: 12px;
-  list-style: none;
-}
-
-.site .work-services li {
-  padding: 5px 10px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: rgb(251 242 228 / 0.6);
-  font-family: var(--ff-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.03em;
 }
 
 /* ---------- the honest gap ---------- */
@@ -1667,9 +1873,6 @@
 .site .work-empty p { max-width: 460px; color: rgb(251 242 228 / 0.68); line-height: 1.55; }
 .site .work-empty .btn { margin-top: 4px; }
 
-@media (max-width: 560px) {
-  .site .work-grid { grid-template-columns: 1fr; }
-}
 
 /* ==========================================================================
    The enquiry form
@@ -1687,9 +1890,19 @@
 
 .site .enquiry { padding: 110px 0 120px; }
 
+/* The form is narrower than the page, so it sits on the centre line rather
+   than against the left edge with a dead band beside it — and the heading
+   above it joins it there, so the two read as one block. */
+.site .enquiry .section-head {
+  align-items: center;
+  margin-inline: auto;
+  text-align: center;
+}
+
 .site .enquiry-shell {
-  max-width: 900px;
-  padding: clamp(22px, 4vw, 40px);
+  max-width: 1152px;
+  margin-inline: auto;
+  padding: clamp(22px, 4vw, 48px);
   border: 1px solid var(--line);
   border-radius: 22px;
   background: var(--ink-soft);
@@ -1698,38 +1911,77 @@
 .site .enquiry-form { display: flex; flex-direction: column; gap: 34px; }
 .site .enquiry-form fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 
-/* ---------- the one question, asked first ---------- */
+/* ---------- the one question, asked first ----------
+   A bento: marketing wide across the top left, website tall down the right,
+   the two screen paths side by side beneath marketing. Tiles are placed by
+   `data-path`, so a fifth path would simply fall into the next free cell. */
 .site .picker-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 12px;
-  margin-top: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    "marketing marketing website"
+    "host      advertise website";
+  gap: 16px;
+  margin-top: 18px;
 }
 
+.site .path-card[data-path="marketing"] { grid-area: marketing; min-height: 280px; }
+.site .path-card[data-path="website"]   { grid-area: website; }
+.site .path-card[data-path="host"]      { grid-area: host; }
+.site .path-card[data-path="advertise"] { grid-area: advertise; }
+
 .site .path-card {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 18px 18px 20px;
+  gap: 18px;
+  min-height: 230px;
+  padding: 26px 26px 28px;
   border: 1.5px solid var(--line);
-  border-radius: 16px;
+  border-radius: 20px;
   background: var(--panel);
   color: var(--paper);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
 }
 
-.site .path-card:hover { transform: translateY(-3px); border-color: var(--chip); }
+/* A wash of the tile's own colour, rising from the corner under the icon.
+   Faint at rest, stronger on hover and when chosen, so the four tiles are
+   told apart by colour before anyone reads a word. */
+.site .path-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(90% 80% at 100% 0%, var(--chip), transparent 70%);
+  opacity: 0.07;
+  transition: opacity 0.25s ease;
+}
 
-/* The chosen one keeps its swatch lit and loses the hover lift, so the row
+.site .path-card:hover { transform: translateY(-3px); border-color: var(--chip); }
+.site .path-card:hover::before { opacity: 0.14; }
+
+.site .path-card:focus-visible { outline: 2px solid var(--chip); outline-offset: 3px; }
+
+/* The chosen one keeps its swatch lit and loses the hover lift, so the grid
    reads as settled rather than as four things still hovering. */
 .site .path-card.on {
   border-color: var(--chip);
   background: var(--panel-2);
   transform: none;
-  box-shadow: inset 3px 0 0 var(--chip);
+}
+
+.site .path-card.on::before { opacity: 0.2; }
+
+.site .path-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .site .path-idx {
@@ -1739,14 +1991,119 @@
   letter-spacing: 0.14em;
 }
 
+.site .path-icon {
+  flex-shrink: 0;
+  width: 54px;
+  height: 54px;
+  fill: none;
+  stroke: var(--chip);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.25s ease;
+}
+
+.site .path-card:hover .path-icon { transform: rotate(-6deg) scale(1.06); }
+
+/* Text sits at the bottom of the tile, so tiles of different heights still
+   line their headings up along the shared row edges. */
+.site .path-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  padding-right: 40px;
+}
+
 .site .path-label {
   font-family: var(--ff-display);
-  font-size: 1.32rem;
+  font-size: clamp(1.4rem, 2.2vw, 1.7rem);
   line-height: 1.05;
   text-transform: uppercase;
 }
 
-.site .path-blurb { color: rgb(251 242 228 / 0.66); font-size: 0.9rem; line-height: 1.45; }
+.site .path-card[data-path="marketing"] .path-label,
+.site .path-card[data-path="website"] .path-label { font-size: clamp(1.6rem, 3.2vw, 2.5rem); }
+
+.site .path-blurb { color: rgb(251 242 228 / 0.66); font-size: 1rem; line-height: 1.45; }
+
+/* What the next step will ask, as a preview. Not buttons — the whole tile is
+   the button — so they are styled quieter than the real chips further down. */
+.site .path-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.site .path-preview span {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: rgb(251 242 228 / 0.62);
+  font-family: var(--ff-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+/* The tall tile lists its preview as a stack rather than a wrap. */
+.site .path-card[data-path="website"] .path-preview { flex-direction: column; align-items: flex-start; }
+
+/* On the wide tile the preview sits above the heading; everywhere else the
+   heading comes first. Order rather than markup, so the JSX stays one shape. */
+.site .path-card[data-path="marketing"] .path-preview { order: 1; }
+.site .path-card[data-path="marketing"] .path-text { order: 2; }
+
+/* Whatever ends the tile keeps clear of the arrow in the corner. */
+.site .path-preview { padding-right: 40px; }
+
+/* A round arrow in the bottom corner that fills with the tile's colour. */
+.site .path-go {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.site .path-go::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-top: 1.5px solid var(--paper);
+  border-right: 1.5px solid var(--paper);
+  transform: translate(-65%, -50%) rotate(45deg);
+}
+
+.site .path-card:hover .path-go,
+.site .path-card.on .path-go {
+  border-color: var(--chip);
+  background: var(--chip);
+  transform: translateX(2px);
+}
+
+.site .path-card:hover .path-go::after,
+.site .path-card.on .path-go::after { border-color: var(--ink); }
+
+/* Chosen: the arrow turns to point down at the questions that just opened. */
+.site .path-card.on .path-go { transform: rotate(90deg); }
+
+/* Two columns: marketing keeps the full width, website and the screens pair up. */
+@media (max-width: 860px) {
+  .site .picker-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "marketing marketing"
+      "website   host"
+      "website   advertise";
+  }
+}
 
 /* ---------- the questions that follow ----------
    Keyed on the path id in JSX, so switching path remounts this and the fade
@@ -1912,7 +2269,17 @@
 
 @media (max-width: 640px) {
   .site .enquiry { padding-bottom: 90px; }
-  .site .picker-grid { grid-template-columns: 1fr; }
+  .site .picker-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas: "marketing" "website" "host" "advertise";
+  }
+
+  .site .path-card,
+  .site .path-card[data-path="marketing"] { min-height: 0; }
+
+  /* One column has no spare room for a preview to use — it only makes the
+     first tile a screen tall. The questions themselves are one tap away. */
+  .site .path-preview { display: none; }
   .site .field-grid { grid-template-columns: 1fr; }
 }
 

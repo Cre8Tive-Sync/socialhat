@@ -24,6 +24,76 @@ import { ENQUIRY_ENDPOINT } from '../config'
  */
 
 /* ==========================================================================
+   The chooser, as a bento
+
+   Marketing is the agency's main line of work, so it takes the wide tile;
+   the website path is the tall one beside it; the two screen paths share the
+   row underneath. The layout itself is grid-template-areas in site.css, keyed
+   off `data-path`, so reordering the tiles is a CSS change, not a JSX one.
+
+   The two big tiles use their extra room to preview their own first question —
+   read off the path's `fields`, so the preview can never promise an option the
+   next step does not actually offer.
+   ========================================================================== */
+
+const BENTO = {
+  marketing: { preview: 6 },
+  website: { preview: 3 },
+}
+
+function previewOf(path, count) {
+  const options = path.fields.find((f) => f.options)?.options ?? []
+  return options.filter((o) => o !== 'Not sure yet').slice(0, count)
+}
+
+/** Drawn to match Icons.jsx: a 2px stroke on a 48px grid. */
+function PathIcon({ name }) {
+  const shapes = {
+    // A megaphone.
+    marketing: (
+      <>
+        <path d="M8 20V28H14L30 37V11L14 20H8Z" />
+        <path d="M14 28L17 38H21L19 29" />
+        <path d="M36 18C38.5 20.5 38.5 27.5 36 30" />
+        <path d="M40 14C45 19 45 29 40 34" />
+      </>
+    ),
+    // A browser window.
+    website: (
+      <>
+        <path d="M7 10H41V38H7Z" />
+        <path d="M7 17H41" />
+        <path d="M11 13.5H12M15 13.5H16M19 13.5H20" />
+        <path d="M13 24H27M13 30H22" />
+        <path d="M31 23H36V32H31Z" />
+      </>
+    ),
+    // A screen on a wall, earning.
+    host: (
+      <>
+        <path d="M6 9H36V30H6Z" />
+        <path d="M21 30V37M14 37H28" />
+        <path d="M43 30A6 6 0 1 1 31 30A6 6 0 1 1 43 30Z" />
+        <path d="M37 27V33" />
+      </>
+    ),
+    // A screen playing.
+    advertise: (
+      <>
+        <path d="M5 11H43V35H5Z" />
+        <path d="M20 17V29L30 23Z" />
+        <path d="M16 41H32" />
+      </>
+    ),
+  }
+  return (
+    <svg className="path-icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+      {shapes[name]}
+    </svg>
+  )
+}
+
+/* ==========================================================================
    The four paths
    ========================================================================== */
 
@@ -341,20 +411,38 @@ export function Enquiry() {
               <fieldset className="picker">
                 <legend className="field-label">What brings you here?</legend>
                 <div className="picker-grid">
-                  {PATHS.map((p) => (
-                    <button
-                      type="button"
-                      key={p.id}
-                      className={p.id === path ? 'path-card on' : 'path-card'}
-                      style={{ '--chip': p.chip }}
-                      aria-pressed={p.id === path}
-                      onClick={() => choose(p.id)}
-                    >
-                      <span className="path-idx">{p.idx}</span>
-                      <span className="path-label">{p.label}</span>
-                      <span className="path-blurb">{p.blurb}</span>
-                    </button>
-                  ))}
+                  {PATHS.map((p) => {
+                    const tile = BENTO[p.id] ?? {}
+                    const preview = tile.preview ? previewOf(p, tile.preview) : null
+                    return (
+                      <button
+                        type="button"
+                        key={p.id}
+                        className={p.id === path ? 'path-card on' : 'path-card'}
+                        data-path={p.id}
+                        style={{ '--chip': p.chip }}
+                        aria-pressed={p.id === path}
+                        onClick={() => choose(p.id)}
+                      >
+                        <span className="path-top">
+                          <span className="path-idx">{p.idx}</span>
+                          <PathIcon name={p.id} />
+                        </span>
+                        <span className="path-text">
+                          <span className="path-label">{p.label}</span>
+                          <span className="path-blurb">{p.blurb}</span>
+                        </span>
+                        {preview ? (
+                          <span className="path-preview" aria-hidden="true">
+                            {preview.map((option) => (
+                              <span key={option}>{option}</span>
+                            ))}
+                          </span>
+                        ) : null}
+                        <span className="path-go" aria-hidden="true" />
+                      </button>
+                    )
+                  })}
                 </div>
               </fieldset>
 
