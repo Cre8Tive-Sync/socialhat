@@ -1,23 +1,24 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 /**
  * The portfolio — deliverable 04.
  *
- * The live Recent Work page is one unsorted scroll: a Telstra TVC, a
- * recruitment website and a pizza shop's social campaign stacked in the order
- * they happened to be added. A prospect who wants to see websites has to read
- * past nine video projects to find the two that are theirs, and mostly doesn't.
- * This is the same ten jobs with a filter over them.
+ * This is the owner's portfolio as it stands on socialhat.com.au/recent-work:
+ * the same ten jobs, in the same order, under the same headings, with the same
+ * words and the same videos and screenshots. What this adds is a filter over
+ * it, so a prospect who wants to see websites does not have to read past the
+ * video projects to find the ones that are theirs.
  *
  * The filter is by *kind of work*, and a job can be several. Monford was a
  * website, the social accounts and the video — it belongs under all three, and
  * splitting it into three cards to make the filter simpler would misrepresent
  * what SocialHat actually did. So `kinds` is a list and filtering is a
- * has-this-tag test.
+ * has-this-tag test. The tags are read off each job's own heading.
  *
- * Cards are built to carry a still and to work without one. Nothing here has
- * artwork yet; `image` is the slot, and until it is filled a card is a
- * typographic tile rather than a grey rectangle apologising for itself.
+ * Video cards show a still and only load YouTube when someone presses play.
+ * Six embedded players up front would be six iframes' worth of script fighting
+ * the 3D scene for the main thread, for videos most visitors never start.
  */
 
 /* ==========================================================================
@@ -34,105 +35,121 @@ const KINDS = [
 /* ==========================================================================
    The work
 
-   Every line below is from socialhat.com.au/recent-work — the clients, the
-   briefs and the service breakdowns are theirs, tightened into a sentence that
-   says what the job was and what it was for. Nothing invented: no view counts,
-   no lead numbers, no awards. A case study that claims a result the business
-   cannot stand behind is worse than one that just says what was made.
+   Copied verbatim from socialhat.com.au/recent-work, in the order it appears
+   there. `client` and `title` are the two halves of each heading on that page
+   (split at the colon), `copy` is the paragraph under it, and `points` is
+   Monford's bulleted list of services. The owner asked for their portfolio
+   exactly, so the wording is theirs as published — spelling included.
+
+   Stills live in public/images/work: the four website screenshots from the
+   old site, and a frame from each YouTube video.
    ========================================================================== */
+
+const still = (name) => `${import.meta.env.BASE_URL}images/work/${name}.jpg`
 
 const WORK = [
   {
     id: 'telstra',
     client: 'Telstra',
-    title: 'Business Is Still Open',
+    title: 'Business is Still Open Campaign Video',
     kinds: ['video'],
-    services: ['30″ TVC', 'Stills'],
-    scale: 'National',
-    blurb:
-      'A nationwide campaign about local business, shot across every Australian state and cut to a 30-second commercial with a stills set alongside it.',
-  },
-  {
-    id: 'brownstones',
-    client: 'Brownstones',
-    title: 'Broadcast hero and a new site',
-    kinds: ['video', 'web', 'social'],
-    services: ['TVC', 'Social edits', 'Website design'],
-    blurb:
-      'A 30″ hero edit for broadcast, longer cuts for social, and a redesign of the website the campaign sent everybody to.',
-  },
-  {
-    id: 'monford',
-    client: 'Monford',
-    title: 'The outsourced marketing department',
-    kinds: ['web', 'social', 'video'],
-    services: ['Website build', 'Social management', 'Video'],
-    scale: 'Ongoing',
-    blurb:
-      'Not a project so much as a standing arrangement — SocialHat runs the website, the social accounts and the video as Monford’s marketing and communications department.',
-  },
-  {
-    id: 'cowley',
-    client: 'Cowley Sheetmetal',
-    title: 'Rebuild, then bring the traffic',
-    kinds: ['web', 'social'],
-    services: ['Website redesign', 'Google Ads', 'Social'],
-    blurb:
-      'A redesigned website and a Google Ads campaign pointed at it, so the new site had something arriving at it from day one.',
-  },
-  {
-    id: 'lhre',
-    client: 'LHRE Group',
-    title: 'A brand from nothing',
-    kinds: ['web'],
-    services: ['Website design', 'Copywriting', 'Branding'],
-    blurb:
-      'A recruitment firm that needed the whole front end of a business: the brand, the words and the website to put them on.',
+    youtube: '38LFLe2udwU',
+    image: still('telstra'),
+    copy:
+      'SocialHat worked with Telstra to develop a nationwide campaign for its local business focus. This campaign involved filming in all Australia states, with the hero edit being a 30″ commercial for Instagram, with still photos for print media.',
   },
   {
     id: 'pact',
     client: 'PACT Construction',
-    title: 'Projects, on LinkedIn',
+    title: 'LinkedIn Campaign Video',
     kinds: ['video', 'social'],
-    services: ['LinkedIn video'],
-    blurb:
-      'Video built for the one platform where construction clients actually are, showing the projects rather than describing them.',
-  },
-  {
-    id: 'sandvik',
-    client: 'Sandvik',
-    title: 'Moving the big equipment',
-    kinds: ['video', 'social'],
-    services: ['Video', 'Photography'],
-    blurb:
-      'Promotional video and stills following heavy equipment out of Perth — the kind of scale that only reads properly on camera.',
-  },
-  {
-    id: 'utas',
-    client: 'University of Tasmania',
-    title: 'Instagram, for prospective students',
-    kinds: ['video', 'social'],
-    services: ['Video series', 'Instagram campaign'],
-    blurb:
-      'A run of video content showing the facilities to the people deciding where to study, in the place they were already looking.',
+    youtube: 'dCEjWyXvFmE',
+    image: still('pact'),
+    copy:
+      'LinkedIn Video for PACT construction. PACT is a WA owned and operated commercial building company that has been in operation since 2004. We really enjoyed working with them and producing this amazing video to showcase their recent projects and show their target audience what they can do.',
   },
   {
     id: 'barker-whittle',
     client: 'Barker Whittle',
-    title: 'Video that had to generate leads',
+    title: 'Social Media Video Campaign',
     kinds: ['video', 'social'],
-    services: ['Social video campaign'],
-    blurb:
-      'A social video campaign with a single job: bring enquiries in, not impressions.',
+    youtube: 'T_oh-d9G2Ns',
+    image: still('barker-whittle'),
+    copy:
+      'Social Media video campaign for Barker Whittle – Master Painters who are one of Perth’s most respected painting contractors. they came to us needing a video to help them generate leads and secure more clients.',
+  },
+  {
+    id: 'utas',
+    client: 'University of Tasmania',
+    title: 'Instagram Video Campaign',
+    kinds: ['video', 'social'],
+    youtube: 'ufjAlcFnCHk',
+    image: still('utas'),
+    copy:
+      'SocialHat made a series of video content for the University of Tasmania to attract more students and to show the amazing facilities that the campus has to offer.',
+  },
+  {
+    id: 'sandvik',
+    client: 'Sandvic',
+    title: 'Social Media Video Campaign | Photos',
+    kinds: ['video', 'social'],
+    youtube: 'wAZGeZYa2rE',
+    image: still('sandvik'),
+    copy:
+      'Sandvic chose SocialHat to film various promotional videos of large equipment transported from Perth. These videos were created in line with brand guidelines, with the purpose to use as promotional marketing material through various social media channels.',
+  },
+  {
+    id: 'lhre',
+    client: 'LHRE Group',
+    title: 'Website Design | Copywriting | Branding',
+    kinds: ['web'],
+    image: still('lhre'),
+    copy:
+      'LHRE Group is a recruitment company that works with some of the biggest mining and construction companies in WA. They engaged Social Hat to build a website, write copy and build a brand for them to help engage current clients and talent and bring in new business.',
+  },
+  {
+    id: 'monford',
+    client: 'Monford',
+    title: 'Website Development | Social Media Management | Video for Social Media',
+    kinds: ['web', 'social', 'video'],
+    image: still('monford'),
+    copy:
+      'Monford commissioned SocialHat to be it’s outsourced marketing and communications department. Services included:',
+    points: [
+      'Updating the existing website.',
+      'Writing project profiles.',
+      'Managing and posting on social media channels.',
+      'Populating video and still content.',
+      'Creating several social media video campaigns.',
+    ],
+  },
+  {
+    id: 'cowley',
+    client: 'Cowley Sheetmetal',
+    title: 'Website Design | Google Adwords | Social Media',
+    kinds: ['web', 'social'],
+    image: still('cowley'),
+    copy:
+      'Cowley Sheetmetal chose SocialHat to update its existing website with a more responsive and fresh design, highlighting its key selling points. SocialHat set up a google ad words campaign to bring in more business and managed analytics to improve sales further.',
   },
   {
     id: 'rise-pizza',
     client: 'Rise Pizza',
-    title: 'Artisan pizza, shot properly',
+    title: 'Social Media Campaign Video',
     kinds: ['video', 'social'],
-    services: ['Social video'],
-    blurb:
-      'Food content made to stop a thumb — the product doing the selling, which with pizza is most of the work.',
+    youtube: 'dLGkkWi90GQ',
+    image: still('rise-pizza'),
+    copy:
+      'Rise Pizza – City beach needed a social media campaign so we shot some video content for them showing off their amazing artisan pizzas.',
+  },
+  {
+    id: 'brownstones',
+    client: 'Brownstones',
+    title: 'Social Media Video Campaign | TVC | Website Design',
+    kinds: ['video', 'web', 'social'],
+    image: still('brownstones'),
+    copy:
+      'Social Hat created a social media campaign for Brownstones, including a 30″ hero edit for broadcast, a more extended 2min version, and several 10″ cutdowns for social media. Social Hat also updated Brownstones’ existing website to a modern and fresh design.',
   },
 ]
 
@@ -142,6 +159,8 @@ const WORK = [
 
 export function Work() {
   const [kind, setKind] = useState(null)
+  // State rather than a ref so the carousel re-renders once the slot exists.
+  const [arrowSlot, setArrowSlot] = useState(null)
 
   const shown = useMemo(() => (kind ? WORK.filter((w) => w.kinds.includes(kind)) : WORK), [kind])
 
@@ -190,34 +209,141 @@ export function Work() {
           ))}
         </div>
 
-        {/* The list is the live region, not each card: a screen reader should
-            hear "showing 4 of 10" once, not ten cards arriving. */}
-        <p className="work-count" role="status">
-          {shown.length === WORK.length
-            ? `All ${WORK.length} projects`
-            : `${shown.length} of ${WORK.length} projects`}
-        </p>
+        {/* The count is the live region, not each card: a screen reader should
+            hear "showing 4 of 10" once, not ten cards arriving. It sits outside
+            the carousel because the carousel remounts on every filter change,
+            and a live region only announces changes to a node that persists. */}
+        <div className="work-bar">
+          <p className="work-count" role="status">
+            {shown.length === WORK.length
+              ? `All ${WORK.length} projects`
+              : `${shown.length} of ${WORK.length} projects`}
+          </p>
+          {/* The carousel portals its arrows in here, next to the count and
+              clear of the chat launcher pinned to the bottom corner. */}
+          <div className="work-arrows" ref={setArrowSlot} />
+        </div>
 
-        {/* Keyed on the filter so the whole grid remounts when it changes, and
-            the cards play their entrance again. That is not decoration: the
-            page does not move when you filter, so without it the only evidence
-            anything happened is a count changing above the fold of the grid.
+        {/* Keyed on the filter so the whole carousel remounts when it changes:
+            the cards play their entrance again and the track starts back at the
+            first card, rather than sitting scrolled halfway along a set that is
+            now a different length.
 
             It is also why the cards do NOT carry `data-reveal` like the rest of
             the site. That observer is set up once, over the nodes present at
             mount — anything rendered later is never observed and would sit at
             opacity 0 forever. These animate themselves instead. */}
         {shown.length ? (
-          <div className="work-grid" key={kind ?? 'all'}>
-            {shown.map((item, i) => (
-              <Card key={item.id} item={item} index={i} />
-            ))}
-          </div>
+          <Carousel key={kind ?? 'all'} items={shown} arrowSlot={arrowSlot} />
         ) : (
           <Empty kind={KINDS.find((k) => k.id === kind)} />
         )}
       </div>
     </section>
+  )
+}
+
+/* ==========================================================================
+   The carousel
+   ========================================================================== */
+
+/**
+ * A native horizontal scroller with snap points, not a transform-driven slider.
+ * Swipe, trackpad, shift-wheel and the arrow keys all work because the browser
+ * already does them; the buttons are for a mouse, and just scroll by one card.
+ *
+ * The progress bar and the buttons' disabled states are read back off the
+ * scroll position, so whichever way someone moved the track, they agree with it.
+ */
+function Carousel({ items, arrowSlot }) {
+  const track = useRef(null)
+  const [pos, setPos] = useState({ start: true, end: items.length < 2, progress: 0, span: 1 })
+
+  const measure = useCallback(() => {
+    const el = track.current
+    if (!el) return
+    const max = el.scrollWidth - el.clientWidth
+    setPos({
+      start: el.scrollLeft <= 2,
+      end: el.scrollLeft >= max - 2,
+      progress: max > 0 ? el.scrollLeft / max : 0,
+      // How much of the whole set is on screen at once — the thumb's length.
+      span: el.scrollWidth ? el.clientWidth / el.scrollWidth : 1,
+    })
+  }, [])
+
+  useEffect(() => {
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [measure])
+
+  // To the next card's own position rather than "one card's width along", so
+  // the target is always a snap point and a click mid-swipe cannot land the
+  // track between two cards.
+  const step = (dir) => {
+    const el = track.current
+    if (!el) return
+    const cards = [...el.children]
+    const pad = cards[0]?.offsetLeft ?? 0
+    const current = cards.findIndex((c) => c.offsetLeft - pad >= el.scrollLeft - 2)
+    const target = cards[Math.max(0, Math.min(cards.length - 1, (current < 0 ? cards.length - 1 : current) + dir))]
+    if (!target) return
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    el.scrollTo({ left: target.offsetLeft - pad, behavior: reduce ? 'auto' : 'smooth' })
+  }
+
+  const fits = pos.start && pos.end
+
+  return (
+    <div className="work-carousel">
+      <div
+        className="work-track"
+        ref={track}
+        onScroll={measure}
+        tabIndex={0}
+        role="region"
+        aria-label="Recent work — scroll sideways for more"
+      >
+        {items.map((item, i) => (
+          <Card key={item.id} item={item} index={i} />
+        ))}
+      </div>
+
+      {/* Nothing to navigate when every card already fits on screen. */}
+      {fits ? null : (
+        <div className="work-progress" aria-hidden="true">
+          <span
+            style={{
+              width: `${pos.span * 100}%`,
+              left: `${pos.progress * (1 - pos.span) * 100}%`,
+            }}
+          />
+        </div>
+      )}
+
+      {arrowSlot && !fits
+        ? createPortal(
+            <>
+              <button
+                type="button"
+                className="work-arrow prev"
+                onClick={() => step(-1)}
+                disabled={pos.start}
+                aria-label="Previous project"
+              />
+              <button
+                type="button"
+                className="work-arrow next"
+                onClick={() => step(1)}
+                disabled={pos.end}
+                aria-label="Next project"
+              />
+            </>,
+            arrowSlot,
+          )
+        : null}
+    </div>
   )
 }
 
@@ -228,28 +354,67 @@ export function Work() {
 function Card({ item, index }) {
   return (
     <article className="work-card" style={{ '--i': index }}>
-      {/* The still, when there is one. Until then the tile carries the client's
-          name at size, which is the thing a prospect is scanning for anyway. */}
-      <div className="work-shot" aria-hidden="true">
-        {item.image ? <img src={item.image} alt="" loading="lazy" /> : <span>{item.client}</span>}
-      </div>
+      {item.youtube ? (
+        <Video item={item} />
+      ) : (
+        <div className="work-shot">
+          <img src={item.image} alt={`${item.client} — ${item.title}`} loading="lazy" />
+        </div>
+      )}
 
       <div className="work-body">
         <header className="work-head">
           <h3>{item.client}</h3>
-          {item.scale ? <span className="work-scale">{item.scale}</span> : null}
         </header>
 
         <p className="work-title">{item.title}</p>
-        <p className="work-blurb">{item.blurb}</p>
+        <p className="work-blurb">{item.copy}</p>
 
-        <ul className="work-services">
-          {item.services.map((service) => (
-            <li key={service}>{service}</li>
-          ))}
-        </ul>
+        {item.points ? (
+          <ul className="work-points">
+            {item.points.map((point) => (
+              <li key={point}>{point}</li>
+            ))}
+          </ul>
+        ) : null}
       </div>
     </article>
+  )
+}
+
+/**
+ * The still until someone asks for the video, then the player in its place.
+ *
+ * Refiltering remounts the grid, which drops a playing video back to its
+ * still. That is the right outcome: the card may not even be in the new set.
+ */
+function Video({ item }) {
+  const [playing, setPlaying] = useState(false)
+
+  if (playing) {
+    return (
+      <div className="work-shot is-video">
+        <iframe
+          src={`https://www.youtube-nocookie.com/embed/${item.youtube}?autoplay=1&rel=0&playsinline=1`}
+          title={`${item.client} — ${item.title}`}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerPolicy="strict-origin-when-cross-origin"
+          allowFullScreen
+        />
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className="work-shot is-video"
+      onClick={() => setPlaying(true)}
+      aria-label={`Play video: ${item.client} — ${item.title}`}
+    >
+      <img src={item.image} alt="" loading="lazy" />
+      <span className="work-play" aria-hidden="true" />
+    </button>
   )
 }
 

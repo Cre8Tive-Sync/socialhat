@@ -31,3 +31,23 @@ export function usePhase() {
 
   return phase
 }
+
+/**
+ * Whether the site takes input yet — `data-live` on the root, which
+ * useHeroScroll sets partway through the handover, once the site is fully
+ * visible. Earlier than `site`, which waits for the handover's last frame.
+ */
+export function useLive() {
+  const read = () => 'live' in document.documentElement.dataset
+  const [live, setLive] = useState(read)
+
+  useEffect(() => {
+    const sync = () => setLive(read())
+    sync()
+    const observer = new MutationObserver(sync)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-live'] })
+    return () => observer.disconnect()
+  }, [])
+
+  return live
+}
