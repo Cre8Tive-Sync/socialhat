@@ -4,11 +4,12 @@
  *   node scripts/smoke-chat.mjs                       the local handler, with .env
  *   node scripts/smoke-chat.mjs --url https://socialhat.vercel.app
  *   node scripts/smoke-chat.mjs --runs 3              repeat the conversation cases
- *   node scripts/smoke-chat.mjs --model qwen/qwen3.8-27b:free   (local only)
+ *   node scripts/smoke-chat.mjs --model groq:openai/gpt-oss-120b   one provider and model (local only)
+ *   node scripts/smoke-chat.mjs --builtin             no keys: the built-in answers only
  *
  * What "pass" means is what a visitor sees: the stream opens, text arrives,
  * it ends with `done`, and no error event reaches the widget. Every request
- * here is a real, billed-or-rate-limited call, so the default run is small.
+ * here spends part of a free daily allowance, so the default run is small.
  *
  * Exits non-zero on any failure, so it can sit in CI or a pre-deploy step.
  */
@@ -25,6 +26,7 @@ const arg = (name, fallback) => {
 const url = arg('url')
 const runs = Number(arg('runs', 1))
 const model = arg('model')
+const builtin = process.argv.includes('--builtin')
 
 /* --------------------------------------------------------------------------
    Target: an HTTP endpoint, or the handler imported in-process
@@ -44,10 +46,18 @@ if (url) {
       if (m) process.env[m[1]] ??= m[2].replace(/^["']|["']$/g, '')
     }
   }
-  if (model) process.env.OPENROUTER_MODEL = model
+  const KEYS = ['GROQ_API_KEY', 'NVIDIA_API_KEY', 'OPENROUTER_API_KEY']
+  if (builtin) for (const k of KEYS) delete process.env[k]
+  if (model) {
+    // `provider:model`, e.g. groq:openai/gpt-oss-120b — that provider only.
+    const [name, ...rest] = model.split(':')
+    for (const k of KEYS) if (!k.startsWith(name.toUpperCase())) delete process.env[k]
+    process.env[`${name.toUpperCase()}_MODELS`] = rest.join(':')
+  }
   const { default: handler } = await import('../api/chat.js')
   call = (init) => handler(new Request('http://localhost/api/chat', init))
-  console.log(`Target: local api/chat.js (model: ${process.env.OPENROUTER_MODEL || 'default'})\n`)
+  const active = KEYS.filter((k) => process.env[k]).map((k) => k.replace('_API_KEY', '').toLowerCase())
+  console.log(`Target: local api/chat.js (providers: ${active.join(', ') || 'none — built-in answers only'})\n`)
 }
 
 /* --------------------------------------------------------------------------
@@ -87,7 +97,7 @@ async function converse(messages) {
     done: events.some((e) => e.type === 'done'),
     actions: events.filter((e) => e.type === 'action').map((e) => e.name),
     models: events.filter((e) => e.type === 'meta').map((e) => e.model),
-    retries: events.filter((e) => e.type === 'meta').reduce((n, e) => n + (e.attempt ?? 0), 0),
+    retries: events.filter((e) => e.type === 'rewind').length,
   }
 }
 
@@ -185,7 +195,6 @@ for (let run = 1; run <= runs; run += 1) {
     if (r.status !== 200) problems.push(`HTTP ${r.status}`)
     if (r.error) problems.push(`error shown to visitor: "${r.error.text.slice(0, 60)}…"`)
     if (!r.done) problems.push('stream never sent done')
-    if (/not switched on/i.test(r.text)) problems.push('no API key on this deployment')
     const verdict = problems.length ? true : c.expect(r)
     if (verdict !== true) problems.push(verdict)
 

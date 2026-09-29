@@ -1,4 +1,5 @@
 import { SYSTEM_PROMPT, TOOLS } from './knowledge.js'
+import { builtinReply } from './fallback.js'
 
 /**
  * The assistant's endpoint — deliverable 03.
@@ -8,12 +9,15 @@ import { SYSTEM_PROMPT, TOOLS } from './knowledge.js'
  * [vite-api-plugin.js] serves it from the same file in `npm run dev`, so there
  * is one implementation rather than one per host.
  *
- * The model is reached through OpenRouter, which speaks the OpenAI chat
- * completions format for every model it carries. That is the only format this
- * file knows, so changing model is an environment variable, not a code change.
+ * The model is reached through a chain of free providers — Groq, NVIDIA,
+ * then OpenRouter — which all speak the OpenAI chat completions format.
+ * Each has its own free allowance; when one is rate-limited or down, the next
+ * one answers. When every one of them fails, api/fallback.js answers from the
+ * site's own facts with no model at all, so a visitor is never left with an
+ * apology.
  *
- * The key is read from the environment and never leaves this process. There is
- * no configuration in which it reaches the browser.
+ * The keys are read from the environment and never leave this process. There
+ * is no configuration in which they reach the browser.
  *
  * Streaming is not a nicety here. A non-streaming reply is several seconds of a
  * blank box on a phone, which reads as broken; a streamed one starts moving
@@ -30,61 +34,83 @@ export const config = { runtime: 'edge' }
    other half is rate limiting per IP, which belongs in the host's edge config
    (Vercel Firewall, Netlify rate limits, a Cloudflare rule) rather than in
    application code that a bot can simply call in parallel. Set one before this
-   goes live — and set a credit limit on the OpenRouter key as well.
+   goes live. The keys are all free tiers, so the worst a flood can do is
+   spend today's allowance — and then the built-in answers take over.
    ========================================================================== */
 
 const MAX_TURNS = 4 // assistant turns per request, so a tool loop cannot run away
 const MAX_MESSAGES = 40 // conversation length a client may send back
 const MAX_CHARS = 4000 // per message
-const DEFAULT_MODEL = 'anthropic/claude-opus-5'
-const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 
 /* ==========================================================================
-   Resilience
+   Providers
 
-   Free models on OpenRouter are shared capacity and regularly answer
-   "temporarily overloaded". Two layers stand between that and the visitor:
-   OpenRouter's own `models` fallback, which moves to the next model in the
-   list inside a single request, and a retry here that tries again with the
-   list rotated, so a different model leads. OPENROUTER_FALLBACK_MODELS
-   (comma-separated) replaces the default chain without a code change.
+   Tried in this order, each model in turn. A provider whose key is not set is
+   skipped, so the chain is whatever keys the deployment has. Every list can be
+   replaced from the environment (GROQ_MODELS, NVIDIA_MODELS,
+   OPENROUTER_MODELS — comma-separated) when a free roster changes, without a
+   code change.
+
+   Free limits are per model on Groq, so several of its models before moving on
+   is several separate allowances, not the same one asked twice.
    ========================================================================== */
 
-// Checked against HatBot's prompt and tools in September 2026: Ling answered
-// in about 2s, the Nemotrons in 15–60s and often overloaded. The popular free
-// models (Gemma, Qwen) are the most often rate-limited, so they sit last.
-const DEFAULT_FALLBACKS = [
-  'inclusionai/ling-3.0-flash-sante:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
-  'nvidia/nemotron-3-ultra-550b-a55b:free',
-  'google/gemma-4-31b-it:free',
-  'qwen/qwen3.8-27b:free',
+const PROVIDERS = [
+  {
+    name: 'groq',
+    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+    keyEnv: 'GROQ_API_KEY',
+    // Checked against HatBot's prompt and tools in September 2026: all three
+    // answered in about a second and opened the form correctly.
+    models: ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'],
+    // Groq's daily caps are per model: one model spending its day leaves the
+    // others untouched, so a daily limit benches that model, not all of Groq.
+    perModelLimits: true,
+  },
+  {
+    name: 'nvidia',
+    endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions',
+    keyEnv: 'NVIDIA_API_KEY',
+    // GPT-OSS 20B answered in about 4s; Nemotron Super works but threw the
+    // occasional 500. DeepSeek (20–30s) and Gemma (timed out) were too slow.
+    models: ['openai/gpt-oss-20b', 'nvidia/nemotron-3-super-120b-a12b'],
+  },
+  {
+    name: 'openrouter',
+    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+    keyEnv: 'OPENROUTER_API_KEY',
+    // Checked against HatBot's prompt and tools in September 2026: Ling
+    // answered in about 2s, the Nemotrons in 15–60s and often overloaded.
+    models: [
+      'inclusionai/ling-3.0-flash-sante:free',
+      'nvidia/nemotron-3-super-120b-a12b:free',
+      'nvidia/nemotron-3-ultra-550b-a55b:free',
+    ],
+    // Optional attribution; it is how the calls are labelled in the
+    // OpenRouter dashboard.
+    headers: { 'X-Title': 'SocialHat HatBot' },
+  },
 ]
-const MAX_ATTEMPTS = 4
-const BACKOFF_MS = [400, 1200, 2500]
+
 // A model that has not produced its first byte by now is treated as down.
 // Once it is streaming it has as long as it needs.
-const FIRST_BYTE_MS = 20000
+const FIRST_BYTE_MS = 12000
+// The whole search for a working model, so a bad day upstream costs the
+// visitor seconds, not a minute, before the built-in answer takes over.
+const BUDGET_MS = 30000
+// How long a model that said "rate limited" or "overloaded" is left alone.
+// Module state, so it lasts as long as a warm instance does — which is
+// exactly when the same limit would be hit again.
+const COOLDOWN_MS = 60000
+// A spent daily allowance will not come back in a minute.
+const DAILY_COOLDOWN_MS = 60 * 60 * 1000
+const cooling = new Map()
 
 export default async function handler(request) {
   // No CORS handling and no OPTIONS branch on purpose. This endpoint is called
   // by the page it is deployed with, so a preflight never happens. Same-origin
   // only is also what keeps somebody else's site from running up this bill.
   if (request.method !== 'POST') return fail(405, 'Use POST.')
-
-  const key = readEnv('OPENROUTER_API_KEY')
-  if (!key) {
-    // Deployed without a key. Say so in the stream rather than returning a 500
-    // the widget would render as a crash — the visitor gets a working handoff
-    // to the form and the phone number, which is the fallback anyway.
-    return sse(async (send) => {
-      send({
-        type: 'text',
-        text: "I'm not switched on yet. Email info@socialhat.com.au or call 08 9285 0811, or use the enquiry form just below and it'll reach the right desk.",
-      })
-      send({ type: 'done' })
-    })
-  }
 
   let messages
   try {
@@ -94,21 +120,32 @@ export default async function handler(request) {
   }
   if (!messages.length) return fail(400, 'No messages.')
 
-  const models = modelChain()
+  // No keys at all is not an outage worth announcing: the built-in answers
+  // are the same fallback every other failure ends at.
+  const candidates = candidateChain()
 
   return sse(async (send) => {
     const history = [...messages]
+    const deadline = Date.now() + BUDGET_MS
+    const toolsRun = []
 
     for (let turn = 0; turn < MAX_TURNS; turn += 1) {
-      const reply = await complete({ key, models, history, send, signal: request.signal })
+      let reply
+      try {
+        reply = await complete({ candidates, history, send, signal: request.signal, deadline })
+      } catch (error) {
+        if (request.signal?.aborted) return
+        console.error('[chat] every provider failed:', error?.message ?? error)
+        answerWithoutModel(messages, toolsRun, send)
+        break
+      }
 
-      // The assistant turn goes back exactly as it came, reasoning included:
-      // Anthropic models reject a tool result whose preceding turn has lost the
-      // reasoning that led to the call.
+      // The assistant turn goes back with its tool calls. Reasoning is not
+      // carried: the next turn may land on a different provider, and none of
+      // these free models need their reasoning replayed to accept a tool result.
       history.push({
         role: 'assistant',
         content: reply.text || null,
-        ...(reply.reasoning.length ? { reasoning_details: reply.reasoning } : {}),
         ...(reply.calls.length ? { tool_calls: reply.calls } : {}),
       })
 
@@ -125,6 +162,7 @@ export default async function handler(request) {
       if (!reply.calls.length) break
 
       for (const call of reply.calls) {
+        toolsRun.push(call.function.name)
         history.push({
           role: 'tool',
           tool_call_id: call.id,
@@ -141,48 +179,84 @@ export default async function handler(request) {
    One assistant turn, with retries
    ========================================================================== */
 
-/** Primary model first, then the fallbacks, without repeats. */
-function modelChain() {
-  const primary = readEnv('OPENROUTER_MODEL') || DEFAULT_MODEL
-  const extra = readEnv('OPENROUTER_FALLBACK_MODELS')
-  const fallbacks = extra ? extra.split(',').map((m) => m.trim()).filter(Boolean) : DEFAULT_FALLBACKS
-  return [...new Set([primary, ...fallbacks])]
+/**
+ * Every (provider, model) pair this deployment can try, in order. Providers
+ * without a key drop out here, and so does anything still cooling off.
+ */
+function candidateChain() {
+  const list = []
+  for (const provider of PROVIDERS) {
+    const key = readEnv(provider.keyEnv)
+    if (!key) continue
+    const override = readEnv(`${provider.name.toUpperCase()}_MODELS`)
+    const models = override ? override.split(',').map((m) => m.trim()).filter(Boolean) : provider.models
+    for (const model of models) list.push({ provider, key, model })
+  }
+  const now = Date.now()
+  const warm = list.filter((c) => !(cooling.get(id(c)) > now))
+  // If everything is cooling, try anyway — a stale cooldown is cheaper to
+  // ignore than a visitor sent to the fallback for no reason.
+  return warm.length ? warm : list
 }
 
+const id = (c) => `${c.provider.name}:${c.model}`
+
 class UpstreamError extends Error {
-  constructor(status, detail) {
-    super(`OpenRouter ${status}: ${String(detail).slice(0, 500)}`)
+  constructor(provider, status, detail) {
+    super(`${provider} ${status}: ${String(detail).slice(0, 500)}`)
+    this.provider = provider
     this.status = status
     this.detail = String(detail)
   }
 }
 
 /**
- * Retrying cannot fix a bad key, and it cannot fix the account's daily free
- * allowance being spent — those fail fast so the visitor is not kept waiting
- * for an answer that will not come. Everything else (overload, rate limit,
- * a 5xx, a dropped or stalled stream, an empty reply) is worth another go.
+ * What a failure means for the rest of the chain. A bad key rules out the
+ * whole provider; a spent daily allowance rules out the provider, or just that
+ * model where limits are per model; a rate limit or overload rules out that
+ * model for a minute; anything else just moves on to the next one.
  */
-function retryable(error) {
-  if (!(error instanceof UpstreamError)) return true
-  if (error.status === 401 || error.status === 403) return false
-  if (error.status === 429 && /per-day|per day|daily/i.test(error.detail)) return false
-  return true
+function classify(error) {
+  if (!(error instanceof UpstreamError)) return 'model'
+  if (error.status === 401 || error.status === 403 || error.status === 402) return 'provider'
+  if (/per-day|per day|daily|\bTPD\b|\bRPD\b/i.test(error.detail)) return 'daily'
+  if (error.status === 429 || error.status === 503 || /overload|rate.?limit|capacity/i.test(error.detail)) return 'cool'
+  return 'model'
 }
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+/** The body each provider takes. They all speak the OpenAI format, near enough. */
+function requestBody(candidate, history) {
+  const body = {
+    model: candidate.model,
+    max_tokens: 1024,
+    stream: true,
+    messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...history],
+    tools: TOOLS,
+  }
+  if (candidate.provider.name === 'openrouter') {
+    // Low effort, reasoning left on: short-form chat over a small, fixed
+    // knowledge base, where depth is not what makes an answer good.
+    body.reasoning = { effort: 'low' }
+  } else {
+    // Groq and NVIDIA reject a `strict` flag some of their models do not
+    // support. The schemas are simple enough that the handler's own JSON
+    // parse is the check that matters.
+    body.tools = TOOLS.map(({ type, function: { strict, ...fn } }) => ({ type, function: fn }))
+  }
+  return body
+}
 
-async function complete({ key, models, history, send, signal }) {
-  let lastError
+async function complete({ candidates, history, send, signal, deadline }) {
+  let lastError = new Error('No providers configured')
+  const ruledOut = new Set()
 
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-    // Rotate, so each retry leads with a different model rather than asking
-    // the overloaded one first again. OpenRouter accepts at most three.
-    const order = [...models.slice(attempt % models.length), ...models.slice(0, attempt % models.length)].slice(0, 3)
+  for (const candidate of candidates) {
+    if (ruledOut.has(candidate.provider.name)) continue
+    if (Date.now() > deadline) break
 
     // Text already on the visitor's screen from a failed attempt has to be
-    // taken back before the retry writes its own, or the bubble reads as two
-    // half-answers glued together.
+    // taken back before the next one writes its own, or the bubble reads as
+    // two half-answers glued together.
     let streamed = 0
     const tracked = (event) => {
       if (event.type === 'text') streamed += event.text.length
@@ -190,66 +264,53 @@ async function complete({ key, models, history, send, signal }) {
     }
 
     const stall = new AbortController()
-    const timer = setTimeout(() => stall.abort(), FIRST_BYTE_MS)
+    const timer = setTimeout(() => stall.abort(), Math.min(FIRST_BYTE_MS, Math.max(1000, deadline - Date.now())))
     const onAbort = () => stall.abort()
     signal?.addEventListener('abort', onAbort)
 
     try {
-      const res = await fetch(ENDPOINT, {
+      const res = await fetch(candidate.provider.endpoint, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${key}`,
+          Authorization: `Bearer ${candidate.key}`,
           'Content-Type': 'application/json',
-          // Optional attribution; it is how the calls are labelled in the
-          // OpenRouter dashboard.
-          'X-Title': 'SocialHat HatBot',
+          ...candidate.provider.headers,
         },
-        body: JSON.stringify({
-          model: order[0],
-          models: order,
-          max_tokens: 2048,
-          stream: true,
-          // Low effort, reasoning left on. This is short-form chat over a small,
-          // fixed knowledge base — the depth is not what makes it good, and low
-          // effort is a third of the latency. Reasoning stays on deliberately:
-          // with it off, Claude will occasionally write a tool call into its
-          // visible text instead of making one, which here would mean a lead
-          // that is silently never captured.
-          reasoning: { effort: 'low' },
-          messages: [
-            {
-              role: 'system',
-              // The system prompt is long, fixed and byte-identical on every
-              // request, which makes it the whole point of a cache breakpoint.
-              // OpenRouter passes `cache_control` through to Anthropic models
-              // and ignores it for providers that cache on their own.
-              content: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-            },
-            ...history,
-          ],
-          tools: TOOLS,
-        }),
-        // A visitor who closes the tab stops the generation they were paying
-        // for; a model that never starts is abandoned for the next one.
+        body: JSON.stringify(requestBody(candidate, history)),
+        // A visitor who closes the tab stops the generation; a model that
+        // never starts is abandoned for the next one.
         signal: stall.signal,
       })
       if (!res.ok || !res.body) {
-        throw new UpstreamError(res.status, await res.text().catch(() => ''))
+        throw new UpstreamError(candidate.provider.name, res.status, await res.text().catch(() => ''))
       }
 
-      const reply = await relay(res.body, tracked, () => clearTimeout(timer))
+      const reply = await relay(res.body, tracked, () => clearTimeout(timer), candidate.provider.name)
       if (!reply.text.trim() && !reply.calls.length && reply.finish !== 'content_filter' && reply.finish !== 'refusal') {
-        throw new UpstreamError(0, 'Empty reply')
+        throw new UpstreamError(candidate.provider.name, 0, 'Empty reply')
       }
-      if (reply.model) send({ type: 'meta', model: reply.model, attempt })
+      send({ type: 'meta', model: id(candidate) })
       return reply
     } catch (error) {
       if (signal?.aborted) throw error
-      lastError = stall.signal.aborted ? new UpstreamError(0, `No response within ${FIRST_BYTE_MS}ms`) : error
-      console.warn(`[chat] attempt ${attempt + 1}/${MAX_ATTEMPTS} via ${order[0]} failed:`, lastError.message)
+      lastError = stall.signal.aborted
+        ? new UpstreamError(candidate.provider.name, 0, `No response within ${FIRST_BYTE_MS}ms`)
+        : error
+      console.warn(`[chat] ${id(candidate)} failed:`, lastError.message)
       if (streamed) send({ type: 'rewind', chars: streamed })
-      if (!retryable(lastError) || attempt === MAX_ATTEMPTS - 1) break
-      await sleep(BACKOFF_MS[Math.min(attempt, BACKOFF_MS.length - 1)])
+
+      const verdict = classify(lastError)
+      if (verdict === 'daily' && candidate.provider.perModelLimits) {
+        cooling.set(id(candidate), Date.now() + DAILY_COOLDOWN_MS)
+      } else if (verdict === 'daily' || verdict === 'provider') {
+        // A spent allowance or a bad key applies to every model on that key,
+        // so the next visitor skips straight past all of them.
+        const until = Date.now() + (verdict === 'daily' ? DAILY_COOLDOWN_MS : COOLDOWN_MS)
+        ruledOut.add(candidate.provider.name)
+        for (const c of candidates) if (c.provider === candidate.provider) cooling.set(id(c), until)
+      } else if (verdict === 'cool') {
+        cooling.set(id(candidate), Date.now() + COOLDOWN_MS)
+      }
     } finally {
       clearTimeout(timer)
       signal?.removeEventListener('abort', onAbort)
@@ -259,16 +320,36 @@ async function complete({ key, models, history, send, signal }) {
   throw lastError
 }
 
+/**
+ * The end of the line: every provider failed. If a tool already ran this
+ * request, the visitor only needs that confirmed; otherwise the built-in
+ * answers take the question.
+ */
+function answerWithoutModel(messages, toolsRun, send) {
+  if (toolsRun.includes('capture_lead')) {
+    send({ type: 'text', text: "Thanks — that's with the team, and they'll be in touch next business day." })
+    return
+  }
+  if (toolsRun.includes('open_enquiry_form')) {
+    send({ type: 'text', text: "I've opened the enquiry form for you — fill it in and the team will come back to you." })
+    return
+  }
+  const reply = builtinReply(messages)
+  if (reply.action) send({ type: 'action', ...reply.action })
+  send({ type: 'text', text: reply.text })
+  send({ type: 'meta', model: 'builtin' })
+}
+
 /* ==========================================================================
    The upstream stream
 
-   OpenRouter streams OpenAI-style chunks: text arrives as `delta.content`, and
+   Every provider streams OpenAI-style chunks: text arrives as `delta.content`, and
    a tool call arrives in pieces keyed by `index` — the id and name once, the
    JSON arguments as a string split across many chunks. Text is forwarded to
    the browser as it lands; tool calls and reasoning are assembled whole.
    ========================================================================== */
 
-async function relay(body, send, onFirstByte) {
+async function relay(body, send, onFirstByte, provider) {
   const reader = body.getReader()
   const decoder = new TextDecoder()
   const calls = []
@@ -308,7 +389,9 @@ async function relay(body, send, onFirstByte) {
       }
       // An upstream failure after streaming has started comes as a chunk, not
       // a status code.
-      if (chunk.error) throw new UpstreamError(chunk.error.code ?? 0, chunk.error.message ?? 'Upstream error')
+      if (chunk.error) {
+        throw new UpstreamError(provider, chunk.error.code ?? 0, chunk.error.message ?? JSON.stringify(chunk.error))
+      }
       if (chunk.model) model = chunk.model
 
       const choice = chunk.choices?.[0]
@@ -348,7 +431,7 @@ async function relay(body, send, onFirstByte) {
   }
 
   // A stream that closes with no finish reason was cut off, not finished.
-  if (!finish) throw new UpstreamError(0, 'Stream ended early')
+  if (!finish) throw new UpstreamError(provider, 0, 'Stream ended early')
   return { text, calls: calls.filter(Boolean), reasoning: reasoning.filter(Boolean), finish, model }
 }
 
@@ -443,8 +526,11 @@ const SSE_HEADERS = {
 
 /** Works under Vercel/Netlify (process.env) and Cloudflare/Deno (globalThis). */
 function readEnv(name) {
-  if (typeof process !== 'undefined' && process.env?.[name]) return process.env[name]
-  return globalThis[name] ?? undefined
+  // Trimmed, because a key pasted into a dashboard with a trailing space or
+  // newline fails upstream as "missing authentication", which says nothing
+  // about the real cause.
+  const raw = typeof process !== 'undefined' && process.env?.[name] ? process.env[name] : globalThis[name]
+  return typeof raw === 'string' ? raw.trim() || undefined : undefined
 }
 
 function fail(status, message) {
