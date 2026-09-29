@@ -67,12 +67,12 @@ export const PRESERVE_AUTHORED_FRAMING = true
 /**
  * Where the enquiry form POSTs its JSON.
  *
- * Empty until the host is decided — the form then falls back to composing the
- * same payload as a `mailto:` to the inbox its path routes to, so it works and
- * is testable today without a server. Set this (Netlify/Vercel function,
- * Formspree, whatever) and the fallback drops out with no other change.
+ * On SiteGround that is server/public/api/enquiry.php, which emails it to the
+ * path's inbox; in `npm run dev`, api/enquiry.js, which prints it. Absolute,
+ * like CHAT_ENDPOINT. Set to '' and the form falls back to composing the same
+ * payload as a `mailto:` — the right setting for a host with no backend.
  */
-export const ENQUIRY_ENDPOINT = ''
+export const ENQUIRY_ENDPOINT = '/api/enquiry'
 
 /**
  * Where the assistant talks to [api/chat.js](../api/chat.js).

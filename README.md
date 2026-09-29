@@ -253,12 +253,13 @@ Two things are deliberately absent:
 Everything answered by tapping — the path cards, the multi-picks, the single
 choices — is a real `<button>` carrying `aria-pressed`, not a styled checkbox.
 
-`ENQUIRY_ENDPOINT` in [src/config.js](src/config.js) is where the JSON POSTs.
-While it is empty the form composes the same payload as a `mailto:` addressed to
-the path's inbox, so it works and is testable with no server. Set the endpoint
-and the fallback drops out with no other change. The routing table is the
-`inbox` key on each path in `PATHS` — all four point at `info@` today because it
-is the only address the business publishes.
+`ENQUIRY_ENDPOINT` in [src/config.js](src/config.js) is where the JSON POSTs:
+`/api/enquiry`, which on SiteGround emails it to the path's inbox (§12) and in
+`npm run dev` prints it to the terminal. Set it to `''` and the form composes the
+same payload as a `mailto:` instead, for a host with no backend. The inbox is
+chosen on the server from the path id — never from anything the browser sends —
+via `ENQUIRY_TO` and its per-path overrides; the `inbox` key on each path in
+`PATHS` is only what the `mailto:` fallback and the error message show.
 
 ### 8. HatBot
 
@@ -439,6 +440,59 @@ component and extracting the text, which comes out as clean prose. The icons are
   framework with SSR. That is the one remaining gap.
 
 Title, description and Open Graph tags are in [index.html](index.html).
+
+### 12. Hosting on SiteGround
+
+socialhat.com.au is on SiteGround, whose shared hosting runs PHP and not Node,
+so `api/*.js` cannot run there. [server/public/](server/public/) holds their PHP
+ports, and `npm run build:siteground` builds the site and copies them into
+`dist/` ([scripts/stage-php.mjs](scripts/stage-php.mjs)):
+
+| URL | Dev / function hosts | SiteGround |
+| --- | --- | --- |
+| `/api/chat` | `api/chat.js` | `api/chat.php` |
+| `/api/instagram` | `api/instagram.js` | `api/instagram.php` |
+| `/api/enquiry` | `api/enquiry.js` (prints it) | `api/enquiry.php` (emails it) |
+
+The `.htaccess` maps the extensionless URLs onto the `.php` files, so the
+frontend is identical on every host.
+
+**One source of truth for HatBot.** The system prompt, tools and built-in
+answers stay in `api/knowledge.js` and `api/fallback.js`. The build exports them
+to `dist/api/_knowledge.php` and the PHP reads that, so there is no second copy
+to drift. The fallback table is plain data (regexes and strings) for exactly
+this reason. Edit the JS; rebuild.
+
+**Secrets live outside the web root**, in `private/secrets.php` beside
+`public_html` — template in [server/secrets.example.php](server/secrets.example.php).
+Nothing there is web-reachable, and a deploy never touches it. The file-based
+cache (feed, model cooldowns, rate-limit counters) lives in `private/cache/`.
+
+**What PHP adds.** A per-IP rate limit (40 chat requests per 10 minutes, 6
+enquiries per hour) — the host-level limit §8 asked for, which SiteGround has no
+setting for. A visitor over the chat limit still gets an answer, from the
+built-in table, at no cost. And HatBot leads with no `LEAD_WEBHOOK` are emailed
+rather than only logged.
+
+**Mail needs SMTP.** The domain's mail is Microsoft 365 and its SPF record ends
+`-all`, so PHP's own `mail()` from a SiteGround server, sending as
+@socialhat.com.au, hard-fails SPF and is treated as spoofing. Set `SMTP_*` in
+the secrets file — an M365 mailbox with SMTP AUTH enabled, or a relay whose
+SPF/DKIM is added to the domain.
+
+**Streaming** has to get past PHP's output buffer, Apache's gzip and
+SiteGround's nginx; `chat.php` and the `.htaccess` switch each off. Confirm on
+the real host that replies arrive word by word, not all at once.
+
+**Deploying.** [.github/workflows/deploy-siteground.yml](.github/workflows/deploy-siteground.yml)
+builds and rsyncs `dist/` to the staging subdomain on every push to `main`, once
+the `SITEGROUND_*` variables and SSH key are set (listed in the file). It refuses
+any target that is not a `public_html` or that contains WordPress, because
+`--delete` pointed at the live site would wipe it. To check a deploy:
+
+```bash
+node scripts/smoke-chat.mjs --url https://new.socialhat.com.au
+```
 
 ## Tuning
 

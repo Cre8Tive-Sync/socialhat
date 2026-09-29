@@ -1,0 +1,76 @@
+name: Deploy to SiteGround (staging)
+
+# Builds the site with its PHP backend (`npm run build:siteground`) and syncs
+# it into the staging subdomain's public_html over SSH.
+#
+# Configure once, in the repo's Settings -> Secrets and variables -> Actions:
+#
+#   Variables  SITEGROUND_HOST   the SSH hostname from Site Tools -> Devs -> SSH Keys Manager
+#              SITEGROUND_PORT   18765 unless Site Tools says otherwise
+#              SITEGROUND_USER   the SSH username (u1234-abcd...)
+#              SITEGROUND_PATH   e.g. www/new.socialhat.com.au/public_html
+#   Secret     SITEGROUND_SSH_KEY  the private half of a key imported into Site Tools
+#
+# Until SITEGROUND_HOST is set the job is skipped, so pushes stay green.
+# Secrets for HatBot, mail and the feed are NOT deployed from here — they live
+# in private/secrets.php next to public_html on the server (see
+# server/secrets.example.php).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: siteground-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: vars.SITEGROUND_HOST != ''
+    runs-on: ubuntu-latest
+    environment:
+      name: siteground-staging
+    env:
+      HOST: ${{ vars.SITEGROUND_HOST }}
+      PORT: ${{ vars.SITEGROUND_PORT || '18765' }}
+      USER: ${{ vars.SITEGROUND_USER }}
+      TARGET: ${{ vars.SITEGROUND_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build:siteground
+
+      - name: Load SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.SITEGROUND_SSH_KEY }}" > ~/.ssh/siteground
+          chmod 600 ~/.ssh/siteground
+          ssh-keyscan -p "$PORT" "$HOST" >> ~/.ssh/known_hosts
+
+      # rsync --delete below makes the target an exact copy of dist/. Pointed at
+      # the wrong folder, that would wipe it — and the wrong folder most likely
+      # to be typed is the live WordPress site. So the deploy refuses any target
+      # that is not a public_html, or that has WordPress in it.
+      - name: Check the target is the staging site
+        run: |
+          case "$TARGET" in
+            */public_html|*/public_html/) ;;
+            *) echo "::error::SITEGROUND_PATH must end in public_html (got '$TARGET')"; exit 1 ;;
+          esac
+          ssh -i ~/.ssh/siteground -p "$PORT" "$USER@$HOST" \
+            "test ! -e '$TARGET/wp-config.php' && test ! -d '$TARGET/wp-admin'" \
+            || { echo "::error::$TARGET contains WordPress — refusing to overwrite it."; exit 1; }
+
+      - name: Sync
+        run: |
+          rsync -rlz --delete --exclude '.well-known/' \
+            -e "ssh -i ~/.ssh/siteground -p $PORT" \
+            dist/ "$USER@$HOST:$TARGET/"
