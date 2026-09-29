@@ -840,6 +840,14 @@
   opacity: 0.6;
 }
 
+/* Client logos: full colour on a white tape, the background they were drawn for. */
+.site .logo-strip { padding: 16px 0; background: #fff; }
+.site .logo-strip .ticker-track,
+.site .logo-strip .ticker-track span { gap: 2.8rem; }
+.site .logo-strip .ticker-track span::after { opacity: 0.3; }
+
+.site .logo-mark { display: block; flex: none; max-width: none; }
+
 @keyframes sh-scroll-left {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
