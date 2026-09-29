@@ -385,10 +385,13 @@
    ink would read as a lighter band across the top of one field. */
 .site .topbar:has(+ .menu.open) { background: var(--ink); }
 
-/* The corner tag is the one thing above the panel's layer. It gets out of the
-   way rather than floating over it. */
-[data-phase="site"] .site:has(.menu.open) :is(.egg-tag, .egg-panel) {
+/* The corner tag and the assistant's launcher sit above the panel's layer.
+   They get out of the way rather than floating over the links. */
+[data-phase="site"] .site:has(.menu.open) :is(.egg-tag, .egg-panel, .ai-launch, .ai-nudge) {
   opacity: 0;
+  /* The nudge's entrance animation fills forwards at full opacity, which wins
+     over the line above; visibility is not in its keyframes. */
+  visibility: hidden;
   pointer-events: none;
 }
 
@@ -868,7 +871,10 @@
 
 /* ---------- section furniture ---------- */
 .site section { position: relative; }
-.site .section-pad { padding: 120px 0; }
+/* Block only. The stats band wears this on the same element as `.wrap`, and a
+   `padding: 120px 0` shorthand here zeroed the wrap's side gutter — the numbers
+   ran flush to the screen edge on everything narrower than 1280px. */
+.site .section-pad { padding-block: 120px; }
 
 .site .section-head {
   display: flex;
@@ -1073,8 +1079,9 @@
 /* 02 Advertising — the countdown nobody waits out */
 .site .skip-badge {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: 18px;
+  /* Left of the card number, which owns the top-right corner on every card. */
+  right: 52px;
   min-width: 64px;
   padding: 4px 8px;
   border-radius: 5px;
@@ -1144,8 +1151,9 @@
 /* 04 Social — a heart that bursts, and a number that rolls */
 .site .heart-trigger {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: 16px;
+  /* Left of the card number, like the skip badge. */
+  right: 50px;
   padding: 4px;
   border: 0;
   background: none;
@@ -1432,6 +1440,11 @@
 }
 
 [data-phase="site"] .site .egg-tag { pointer-events: auto; }
+
+/* The assistant's launcher owns the bottom-right corner when it is mounted, and
+   sat squarely on top of this tag. The tag and its panel take the other side. */
+.site:has(.ai-launch) :is(.egg-tag, .egg-panel) { right: auto; left: 18px; }
+.site:has(.ai-launch) .egg-panel { transform-origin: 0 100%; }
 
 .site .egg-panel {
   position: fixed;
@@ -2658,6 +2671,92 @@
      nudge exists to work around — it saves a few pixels by removing the only
      part of the control that says what it is. Only the padding gives way. */
   .site .ai-launch { padding: 13px 18px 13px 14px; font-size: 0.95rem; }
+}
+
+/* ==========================================================================
+   Touch and small screens
+
+   Everything above was laid out with a mouse in mind, and a fingertip is about
+   44px across. These rules only grow the *hit area* — padding, not type — so
+   nothing looks different on a phone except that it can be hit first time.
+   Keyed to `pointer: coarse` rather than a width, because an iPad in landscape
+   is desktop-wide and still driven by a thumb.
+   ========================================================================== */
+
+@media (pointer: coarse) {
+  .site .footer-col a { margin-bottom: 0; padding: 11px 0; }
+  .site .socials { gap: 10px; }
+  .site .socials a { width: 44px; height: 44px; }
+
+  .site .service-more { min-height: 44px; margin-top: 6px; }
+
+  .site .heart-trigger {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    top: 8px;
+    right: 42px;
+  }
+
+  .site .pick { min-height: 44px; }
+  .site .swatch { width: 44px; height: 44px; }
+  .site .egg-tag { min-height: 44px; }
+  .site .ai-x { width: 44px; height: 44px; }
+  .site .ai-send { width: 44px; height: 44px; }
+
+  .site .nav-links a { display: inline-block; padding: 14px 0; }
+
+  /* iOS zooms the whole page into any field set under 16px the moment it is
+     focused, and does not zoom back out. The composer was 15.2px. */
+  .site .ai-composer textarea { font-size: 16px; }
+
+  /* A hover state on a touch screen is set by the tap and then stays set until
+     something else is tapped — cards left lifted, tiles left dimmed. */
+  .site .feed-tile:hover img { transform: none; opacity: 1; }
+  .site .work-card:hover { border-color: var(--line); transform: none; }
+  .site .path-card:hover:not(.on) { transform: none; border-color: var(--line); }
+}
+
+@media (max-width: 640px) {
+  /* The desktop rhythm is 120px of air around every section, which on a phone
+     is a fifth of the screen of nothing, twice per section. */
+  .site .masthead { padding: 124px 0 64px; }
+  .site .masthead-actions { margin-bottom: 40px; }
+  .site .section-pad { padding-block: 80px; }
+  .site .section-head { margin-bottom: 40px; }
+  .site .clients-band { padding: 40px 0; }
+  .site .cta-band { padding: 80px 0; }
+  .site .enquiry { padding-top: 80px; }
+
+  /* The console is for people reading the source, which nobody does on a
+     phone — and with the launcher in one bottom corner, the tag in the other
+     sat over the copy the whole way down the page. */
+  .site .egg-tag,
+  .site .egg-panel { display: none; }
+
+  /* Four figures, two by two, rather than a column a screen and a half tall. */
+  .site .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 20px; }
+
+  /* The launcher is fixed over the bottom-right corner for the whole page, so
+     the last lines of the footer need room to scroll out from under it. */
+  .site footer { padding-bottom: 110px; }
+}
+
+/* Foldables and the narrowest Androids. The launcher keeps its label — see the
+   note on it above — but at 280px it was half the width of the screen. */
+@media (max-width: 359px) {
+  .site .ai-launch { gap: 7px; padding: 11px 15px 11px 12px; font-size: 0.875rem; }
+  .site .ai-nudge-say { max-width: 200px; font-size: 0.92rem; }
+  .site .stats-grid { grid-template-columns: 1fr; }
+}
+
+/* A phone on its side is ~390px tall. The desktop panel's `100vh - 140px`
+   left a chat window about 250px high, most of it header and composer. */
+@media (max-height: 500px) and (min-width: 561px) {
+  .site .ai-panel { top: 12px; bottom: 12px; height: auto; }
+  .site .menu { padding-top: 88px; }
+  .site .menu-links a { padding: 12px 0; font-size: clamp(1.8rem, 8vh, 2.4rem); }
 }
 
 /* ---------- arrival ----------

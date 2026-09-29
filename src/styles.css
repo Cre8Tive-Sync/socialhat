@@ -62,6 +62,12 @@ body {
   font-synthesis-weight: none;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+  /* Every control on the page draws its own pressed state; the grey flash
+     mobile Safari and Chrome lay over a tapped link is a second one on top. */
+  -webkit-tap-highlight-color: transparent;
+  /* Stops iOS inflating body copy on rotation to landscape. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* ==========================================================================
@@ -412,6 +418,11 @@ body {
    ========================================================================== */
 
 @media (max-width: 40rem) {
+  /* Raised on a phone to clear the scroll cue, which sits at the bottom centre
+     and, on a short screen, landed squarely on the opening paragraph. The cue
+     is 1.75rem off the floor plus a label and a 2.75rem track — about 6rem. */
+  :root { --floor: clamp(7rem, 15vh, 8.5rem); }
+
   /* One column anchored low, where a thumb is not covering it and the scene
      still has room to breathe. The per-beat placement is desktop composition;
      on a phone there is only one sensible place for it. */
