@@ -471,8 +471,11 @@ cache (feed, model cooldowns, rate-limit counters) lives in `private/cache/`.
 **What PHP adds.** A per-IP rate limit (40 chat requests per 10 minutes, 6
 enquiries per hour) — the host-level limit §8 asked for, which SiteGround has no
 setting for. A visitor over the chat limit still gets an answer, from the
-built-in table, at no cost. And HatBot leads with no `LEAD_WEBHOOK` are emailed
-rather than only logged.
+built-in table, at no cost. HatBot leads with no `LEAD_WEBHOOK` are emailed
+rather than only logged. And the Instagram token renews itself: the one in
+`secrets.php` is only the seed, swapped weekly for a fresh one kept in the
+cache, so the 60-day expiry §10 warns about no longer arrives. Pasting a new
+token into `secrets.php` takes over from the stored one.
 
 **Mail needs SMTP.** The domain's mail is Microsoft 365 and its SPF record ends
 `-all`, so PHP's own `mail()` from a SiteGround server, sending as

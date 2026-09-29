@@ -17,16 +17,20 @@ const TTL_S = 15 * 60;  // an agency posts a few times a week; this protects the
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') json_out(['error' => 'Use GET.'], 405);
 
-$token = env('INSTAGRAM_TOKEN');
+$seed = env('INSTAGRAM_TOKEN');
 $handle = env('INSTAGRAM_HANDLE') ?? 'socialhat.media';
 
 // No token: the grid renders its follow card, which is a working link.
-if (!$token) feed(['handle' => $handle, 'posts' => [], 'reason' => 'unconfigured']);
+if (!$seed) feed(['handle' => $handle, 'posts' => [], 'reason' => 'unconfigured']);
 
 $cacheFile = cache_dir('instagram') . '/feed.json';
 $cached = is_file($cacheFile) ? json_decode((string) file_get_contents($cacheFile), true) : null;
 
 if (is_array($cached) && time() - ($cached['at'] ?? 0) < TTL_S) feed($cached['payload'], 'HIT');
+
+// Only on a cache miss — at most every 15 minutes — so the renewal check below
+// costs nothing on the requests that matter.
+$token = current_token($seed);
 
 $url = 'https://graph.instagram.com/v21.0/me/media?' . http_build_query([
     'fields' => 'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp',
@@ -69,6 +73,55 @@ foreach ($data['data'] ?? [] as $post) {
 $payload = ['handle' => $handle, 'reason' => null, 'posts' => $posts];
 @file_put_contents($cacheFile, json_encode(['at' => time(), 'payload' => $payload]), LOCK_EX);
 feed($payload, 'MISS');
+
+/**
+ * The token to use, renewed before it can expire.
+ *
+ * Long-lived Instagram tokens die 60 days after they were issued unless they
+ * are refreshed, and a refresh is allowed once a token is a day old. Left alone,
+ * the feed goes quiet two months after setup and nobody notices. So the token
+ * pasted into secrets.php is only the seed: the working copy lives in the cache
+ * and is swapped for a fresh one weekly, retrying daily if Instagram says no.
+ *
+ * A different token pasted into secrets.php — after a password change, say —
+ * replaces the stored one, which is what whoever pasted it expects.
+ */
+function current_token(string $seed): string
+{
+    return with_json_file(cache_dir('instagram') . '/token.json', static function (array $s) use ($seed) {
+        $now = time();
+        $seedId = hash('sha256', $seed);
+        if (($s['seed'] ?? null) !== $seedId || empty($s['token'])) {
+            // Its age is unknown, so it is due at once. A token under a day old
+            // is refused, and simply tried again tomorrow.
+            $s = ['seed' => $seedId, 'token' => $seed, 'refreshedAt' => 0, 'triedAt' => 0];
+        }
+        if ($now - $s['refreshedAt'] > 7 * 86400 && $now - $s['triedAt'] > 86400) {
+            $s['triedAt'] = $now;
+            if ($fresh = refresh_token($s['token'])) {
+                $s['token'] = $fresh;
+                $s['refreshedAt'] = $now;
+            }
+        }
+        return [$s, $s['token']];
+    });
+}
+
+function refresh_token(string $token): ?string
+{
+    $ch = curl_init('https://graph.instagram.com/refresh_access_token?' . http_build_query([
+        'grant_type' => 'ig_refresh_token',
+        'access_token' => $token,
+    ]));
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_TIMEOUT => 6]);
+    $body = curl_exec($ch);
+    curl_close($ch);
+    $data = is_string($body) ? json_decode($body, true) : null;
+    if (is_array($data) && !empty($data['access_token']) && is_string($data['access_token'])) return $data['access_token'];
+    // Never the token itself — logs are not a place for credentials.
+    error_log('[instagram] token refresh refused: ' . json_encode($data['error'] ?? 'no response'));
+    return null;
+}
 
 function feed(array $payload, ?string $cacheState = null): never
 {
