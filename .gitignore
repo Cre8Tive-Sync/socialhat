@@ -11,3 +11,5 @@ public/models/scene.glb
 
 # Copied out of three by `npm run pack-model`
 public/draco/
+.vercel
+.env*

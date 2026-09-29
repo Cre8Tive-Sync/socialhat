@@ -39,6 +39,33 @@ const MAX_CHARS = 4000 // per message
 const DEFAULT_MODEL = 'anthropic/claude-opus-5'
 const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 
+/* ==========================================================================
+   Resilience
+
+   Free models on OpenRouter are shared capacity and regularly answer
+   "temporarily overloaded". Two layers stand between that and the visitor:
+   OpenRouter's own `models` fallback, which moves to the next model in the
+   list inside a single request, and a retry here that tries again with the
+   list rotated, so a different model leads. OPENROUTER_FALLBACK_MODELS
+   (comma-separated) replaces the default chain without a code change.
+   ========================================================================== */
+
+// Checked against HatBot's prompt and tools in September 2026: Ling answered
+// in about 2s, the Nemotrons in 15–60s and often overloaded. The popular free
+// models (Gemma, Qwen) are the most often rate-limited, so they sit last.
+const DEFAULT_FALLBACKS = [
+  'inclusionai/ling-3.0-flash-sante:free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'google/gemma-4-31b-it:free',
+  'qwen/qwen3.8-27b:free',
+]
+const MAX_ATTEMPTS = 4
+const BACKOFF_MS = [400, 1200, 2500]
+// A model that has not produced its first byte by now is treated as down.
+// Once it is streaming it has as long as it needs.
+const FIRST_BYTE_MS = 20000
+
 export default async function handler(request) {
   // No CORS handling and no OPTIONS branch on purpose. This endpoint is called
   // by the page it is deployed with, so a preflight never happens. Same-origin
@@ -67,53 +94,13 @@ export default async function handler(request) {
   }
   if (!messages.length) return fail(400, 'No messages.')
 
-  const model = readEnv('OPENROUTER_MODEL') || DEFAULT_MODEL
+  const models = modelChain()
 
   return sse(async (send) => {
     const history = [...messages]
 
     for (let turn = 0; turn < MAX_TURNS; turn += 1) {
-      const res = await fetch(ENDPOINT, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${key}`,
-          'Content-Type': 'application/json',
-          // Optional attribution; it is how the calls are labelled in the
-          // OpenRouter dashboard.
-          'X-Title': 'SocialHat HatBot',
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 2048,
-          stream: true,
-          // Low effort, reasoning left on. This is short-form chat over a small,
-          // fixed knowledge base — the depth is not what makes it good, and low
-          // effort is a third of the latency. Reasoning stays on deliberately:
-          // with it off, Claude will occasionally write a tool call into its
-          // visible text instead of making one, which here would mean a lead
-          // that is silently never captured.
-          reasoning: { effort: 'low' },
-          messages: [
-            {
-              role: 'system',
-              // The system prompt is long, fixed and byte-identical on every
-              // request, which makes it the whole point of a cache breakpoint.
-              // OpenRouter passes `cache_control` through to Anthropic models
-              // and ignores it for providers that cache on their own.
-              content: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-            },
-            ...history,
-          ],
-          tools: TOOLS,
-        }),
-        // A visitor who closes the tab stops the generation they were paying for.
-        signal: request.signal,
-      })
-      if (!res.ok || !res.body) {
-        throw new Error(`OpenRouter ${res.status}: ${await res.text().catch(() => '')}`)
-      }
-
-      const reply = await relay(res.body, send)
+      const reply = await complete({ key, models, history, send, signal: request.signal })
 
       // The assistant turn goes back exactly as it came, reasoning included:
       // Anthropic models reject a tool result whose preceding turn has lost the
@@ -151,6 +138,128 @@ export default async function handler(request) {
 }
 
 /* ==========================================================================
+   One assistant turn, with retries
+   ========================================================================== */
+
+/** Primary model first, then the fallbacks, without repeats. */
+function modelChain() {
+  const primary = readEnv('OPENROUTER_MODEL') || DEFAULT_MODEL
+  const extra = readEnv('OPENROUTER_FALLBACK_MODELS')
+  const fallbacks = extra ? extra.split(',').map((m) => m.trim()).filter(Boolean) : DEFAULT_FALLBACKS
+  return [...new Set([primary, ...fallbacks])]
+}
+
+class UpstreamError extends Error {
+  constructor(status, detail) {
+    super(`OpenRouter ${status}: ${String(detail).slice(0, 500)}`)
+    this.status = status
+    this.detail = String(detail)
+  }
+}
+
+/**
+ * Retrying cannot fix a bad key, and it cannot fix the account's daily free
+ * allowance being spent — those fail fast so the visitor is not kept waiting
+ * for an answer that will not come. Everything else (overload, rate limit,
+ * a 5xx, a dropped or stalled stream, an empty reply) is worth another go.
+ */
+function retryable(error) {
+  if (!(error instanceof UpstreamError)) return true
+  if (error.status === 401 || error.status === 403) return false
+  if (error.status === 429 && /per-day|per day|daily/i.test(error.detail)) return false
+  return true
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+async function complete({ key, models, history, send, signal }) {
+  let lastError
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+    // Rotate, so each retry leads with a different model rather than asking
+    // the overloaded one first again. OpenRouter accepts at most three.
+    const order = [...models.slice(attempt % models.length), ...models.slice(0, attempt % models.length)].slice(0, 3)
+
+    // Text already on the visitor's screen from a failed attempt has to be
+    // taken back before the retry writes its own, or the bubble reads as two
+    // half-answers glued together.
+    let streamed = 0
+    const tracked = (event) => {
+      if (event.type === 'text') streamed += event.text.length
+      send(event)
+    }
+
+    const stall = new AbortController()
+    const timer = setTimeout(() => stall.abort(), FIRST_BYTE_MS)
+    const onAbort = () => stall.abort()
+    signal?.addEventListener('abort', onAbort)
+
+    try {
+      const res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          // Optional attribution; it is how the calls are labelled in the
+          // OpenRouter dashboard.
+          'X-Title': 'SocialHat HatBot',
+        },
+        body: JSON.stringify({
+          model: order[0],
+          models: order,
+          max_tokens: 2048,
+          stream: true,
+          // Low effort, reasoning left on. This is short-form chat over a small,
+          // fixed knowledge base — the depth is not what makes it good, and low
+          // effort is a third of the latency. Reasoning stays on deliberately:
+          // with it off, Claude will occasionally write a tool call into its
+          // visible text instead of making one, which here would mean a lead
+          // that is silently never captured.
+          reasoning: { effort: 'low' },
+          messages: [
+            {
+              role: 'system',
+              // The system prompt is long, fixed and byte-identical on every
+              // request, which makes it the whole point of a cache breakpoint.
+              // OpenRouter passes `cache_control` through to Anthropic models
+              // and ignores it for providers that cache on their own.
+              content: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+            },
+            ...history,
+          ],
+          tools: TOOLS,
+        }),
+        // A visitor who closes the tab stops the generation they were paying
+        // for; a model that never starts is abandoned for the next one.
+        signal: stall.signal,
+      })
+      if (!res.ok || !res.body) {
+        throw new UpstreamError(res.status, await res.text().catch(() => ''))
+      }
+
+      const reply = await relay(res.body, tracked, () => clearTimeout(timer))
+      if (!reply.text.trim() && !reply.calls.length && reply.finish !== 'content_filter' && reply.finish !== 'refusal') {
+        throw new UpstreamError(0, 'Empty reply')
+      }
+      if (reply.model) send({ type: 'meta', model: reply.model, attempt })
+      return reply
+    } catch (error) {
+      if (signal?.aborted) throw error
+      lastError = stall.signal.aborted ? new UpstreamError(0, `No response within ${FIRST_BYTE_MS}ms`) : error
+      console.warn(`[chat] attempt ${attempt + 1}/${MAX_ATTEMPTS} via ${order[0]} failed:`, lastError.message)
+      if (streamed) send({ type: 'rewind', chars: streamed })
+      if (!retryable(lastError) || attempt === MAX_ATTEMPTS - 1) break
+      await sleep(BACKOFF_MS[Math.min(attempt, BACKOFF_MS.length - 1)])
+    } finally {
+      clearTimeout(timer)
+      signal?.removeEventListener('abort', onAbort)
+    }
+  }
+
+  throw lastError
+}
+
+/* ==========================================================================
    The upstream stream
 
    OpenRouter streams OpenAI-style chunks: text arrives as `delta.content`, and
@@ -159,18 +268,24 @@ export default async function handler(request) {
    the browser as it lands; tool calls and reasoning are assembled whole.
    ========================================================================== */
 
-async function relay(body, send) {
+async function relay(body, send, onFirstByte) {
   const reader = body.getReader()
   const decoder = new TextDecoder()
   const calls = []
   const reasoning = []
   let text = ''
   let finish = null
+  let model = null
   let buffer = ''
+  let started = false
 
   for (;;) {
     const { done, value } = await reader.read()
     if (done) break
+    if (!started) {
+      started = true
+      onFirstByte?.()
+    }
     buffer += decoder.decode(value, { stream: true })
 
     const lines = buffer.split('\n')
@@ -181,7 +296,9 @@ async function relay(body, send) {
       // Blank lines end frames; lines starting ':' are OpenRouter keep-alives.
       if (!line.startsWith('data:')) continue
       const data = line.slice(5).trim()
-      if (data === '[DONE]') return { text, calls, reasoning, finish }
+      if (data === '[DONE]') {
+        return { text, calls: calls.filter(Boolean), reasoning: reasoning.filter(Boolean), finish, model }
+      }
 
       let chunk
       try {
@@ -191,7 +308,8 @@ async function relay(body, send) {
       }
       // An upstream failure after streaming has started comes as a chunk, not
       // a status code.
-      if (chunk.error) throw new Error(chunk.error.message ?? 'Upstream error')
+      if (chunk.error) throw new UpstreamError(chunk.error.code ?? 0, chunk.error.message ?? 'Upstream error')
+      if (chunk.model) model = chunk.model
 
       const choice = chunk.choices?.[0]
       if (!choice) continue
@@ -229,7 +347,9 @@ async function relay(body, send) {
     }
   }
 
-  return { text, calls: calls.filter(Boolean), reasoning: reasoning.filter(Boolean), finish }
+  // A stream that closes with no finish reason was cut off, not finished.
+  if (!finish) throw new UpstreamError(0, 'Stream ended early')
+  return { text, calls: calls.filter(Boolean), reasoning: reasoning.filter(Boolean), finish, model }
 }
 
 /* ==========================================================================

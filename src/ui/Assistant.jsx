@@ -124,6 +124,14 @@ export function Assistant({ awake }) {
           return next
         })
 
+      const rewind = (chars) =>
+        setMessages((prev) => {
+          const next = [...prev]
+          const last = next[next.length - 1]
+          next[next.length - 1] = { ...last, content: last.content.slice(0, Math.max(0, last.content.length - chars)) }
+          return next
+        })
+
       try {
         const res = await fetch(CHAT_ENDPOINT, {
           method: 'POST',
@@ -136,6 +144,9 @@ export function Assistant({ awake }) {
         for await (const event of readSSE(res.body, controller.signal)) {
           if (event.type === 'text' || event.type === 'error') append(event.text)
           else if (event.type === 'action') act(event)
+          // The server is retrying on another model: take back what the failed
+          // attempt had already written so the answer does not appear twice.
+          else if (event.type === 'rewind') rewind(event.chars)
         }
       } catch (error) {
         if (error.name !== 'AbortError') {
