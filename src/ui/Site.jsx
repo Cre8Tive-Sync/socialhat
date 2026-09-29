@@ -831,14 +831,55 @@ function Ticker({ items, tone = '', reverse = false, tilt }) {
   )
 }
 
+/**
+ * Sized by area rather than height, so a long thin wordmark and a square
+ * badge carry the same visual weight: height = sqrt(area / aspect).
+ */
+const LOGO_AREA = 3600
+const LOGO_MAX_H = 48
+
+/**
+ * Four copies rather than two: a lane of logos is shorter than a wide screen,
+ * and the wrap still lands exactly because the halves are identical.
+ */
+function LogoTicker({ clients, reverse = false, tilt }) {
+  const lane = [...clients, ...clients, ...clients, ...clients]
+  return (
+    <div
+      className="ticker-strip logo-strip"
+      style={tilt ? { transform: `rotate(${tilt}deg)` } : undefined}
+    >
+      <div className={reverse ? 'ticker-track reverse' : 'ticker-track'}>
+        {lane.map(([name, file, ratio, scale = 1], i) => {
+          const h = Math.min(LOGO_MAX_H, Math.sqrt(LOGO_AREA / ratio)) * scale
+          const copy = i >= clients.length
+          return (
+            // Index as key, because the lane is deliberately repeats of one list.
+            <span key={i} aria-hidden={copy || undefined}>
+              <img
+                className="logo-mark"
+                src={`/images/clients/${file}.webp`}
+                alt={copy ? '' : name}
+                width={Math.round(h * ratio)}
+                height={Math.round(h)}
+                decoding="async"
+              />
+            </span>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function Clients() {
   return (
     // `#work` now belongs to the portfolio below, which is what anyone
     // following a link called Work is actually after. The logo band keeps its
     // own anchor.
-    <section className="clients-band" id="clients">
-      <Ticker items={CLIENTS_A} tone="alt" tilt={1.2} />
-      <Ticker items={CLIENTS_B} tilt={-1.2} reverse />
+    <section className="clients-band" id="clients" aria-label="Clients">
+      <LogoTicker clients={CLIENTS_A} tilt={1.2} />
+      <LogoTicker clients={CLIENTS_B} tilt={-1.2} reverse />
     </section>
   )
 }
@@ -1328,23 +1369,30 @@ const SERVICES = [
   },
 ]
 
+/**
+ * [name, file in /images/clients, width / height, scale]. Full-colour logos
+ * on transparent backgrounds, laid straight onto a white tape. Scale lifts the
+ * fine-print crests that would otherwise be unreadable.
+ */
 const CLIENTS_A = [
-  'Sandvik',
-  'Wesfarmers',
-  'Curtin University',
-  'City of Vincent',
-  'Mount Gibson',
-  'Monadelphous',
+  ['Sandvik', 'sandvik', 300 / 111],
+  ['Wesfarmers', 'wesfarmers', 352 / 149],
+  ['Curtin University', 'curtin', 250 / 47],
+  ['City of Vincent', 'city-of-vincent', 455 / 142, 1.3],
+  ['Mount Gibson Iron', 'mount-gibson', 142 / 92],
+  ['Monadelphous', 'monadelphous', 241 / 31],
+  ['Express Two Storey Living', 'express', 177 / 98],
+  ['Brightwater', 'brightwater', 302 / 90],
 ]
 
 const CLIENTS_B = [
-  'Georgiou',
-  'Probuild',
-  'Pindan',
-  'Gold Roads',
-  'Summit Homes',
-  'Dept of Communities',
-  'Dept of Health & Aged Care',
+  ['Georgiou', 'georgiou', 250 / 58],
+  ['Probuild', 'probuild', 250 / 32],
+  ['Pindan', 'pindan', 250 / 36],
+  ['Gold Road Resources', 'gold-road', 250 / 92],
+  ['Summit Homes Group', 'summit', 226 / 160],
+  ['Department of Communities', 'dept-communities', 250 / 40, 1.3],
+  ['Department of Health and Aged Care', 'dept-health', 278 / 126, 1.25],
 ]
 
 const STATS = [
