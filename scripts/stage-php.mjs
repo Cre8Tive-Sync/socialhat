@@ -31,6 +31,25 @@ if (!fs.existsSync(path.join(dist, 'index.html'))) {
 
 fs.cpSync(serverPublic, dist, { recursive: true })
 
+/**
+ * `--staging` tells search engines to stay away: a staging copy that gets
+ * indexed competes with the real site for its own name. A response header, not
+ * robots.txt — a Disallow stops the crawler reading the page, so it never sees
+ * a noindex and can still list the URL from links to it.
+ *
+ * Opt-in, not opt-out, on purpose. Forgetting the flag on staging costs a
+ * duplicate that the canonical tag already points back to the real domain;
+ * forgetting to remove it at launch would quietly de-list the real site.
+ */
+if (process.argv.includes('--staging')) {
+  fs.appendFileSync(
+    path.join(dist, '.htaccess'),
+    '\n# Staging build (--staging): keep this copy out of search results.\n' +
+      '<IfModule mod_headers.c>\n  Header always set X-Robots-Tag "noindex, nofollow"\n</IfModule>\n',
+  )
+  console.log('[stage-php] staging build: every response carries X-Robots-Tag: noindex')
+}
+
 const knowledge = {
   systemPrompt: SYSTEM_PROMPT,
   tools: TOOLS,

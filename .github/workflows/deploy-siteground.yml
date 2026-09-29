@@ -46,7 +46,9 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run build:siteground
+      # --staging adds a noindex header, so this copy stays out of Google.
+      # The production deploy must NOT pass it.
+      - run: npm run build:siteground -- --staging
 
       - name: Load SSH key
         run: |
