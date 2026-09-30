@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CHAT_ENDPOINT, CHAT_GREETING, CHAT_NUDGE, CHAT_NUDGE_DELAY } from '../config'
+import { CHAT_ENDPOINT, CHAT_GREETING, CHAT_NUDGE, CHAT_NUDGE_DELAY, PRIVACY_URL } from '../config'
 import { track } from '../analytics'
 
 /**
@@ -252,7 +252,8 @@ export function Assistant({ awake }) {
 
           <p className="ai-fineprint">
             HatBot is an automated assistant, not a person, and it can get things wrong. For
-            anything that matters, call 08 9285 0811.
+            anything that matters, call 08 9285 0811. What you type is sent to an AI service to
+            answer — <a href={PRIVACY_URL}>privacy policy</a>.
           </p>
         </div>
 

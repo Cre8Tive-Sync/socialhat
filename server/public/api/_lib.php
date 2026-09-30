@@ -116,8 +116,12 @@ function rate_limited(string $bucket, int $max, int $windowSeconds): bool
     $dir = cache_dir('rate');
     $now = time();
 
-    // Now and then, sweep counters nobody has touched in a day.
-    if (random_int(1, 200) === 1) {
+    // Hourly, sweep counters nobody has touched in a day. On a clock rather
+    // than at random, because the privacy policy promises these go within a
+    // day, and a random sweep on a quiet site could leave them for weeks.
+    $swept = "$dir/.swept";
+    if (@filemtime($swept) < $now - 3600) {
+        @touch($swept);
         foreach (glob("$dir/*.json") ?: [] as $old) {
             if (@filemtime($old) < $now - 86400) @unlink($old);
         }

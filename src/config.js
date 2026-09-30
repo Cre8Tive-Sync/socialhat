@@ -121,6 +121,13 @@ export const CHAT_NUDGE = "Hi, I'm HatBot. Got a question? Just ask me."
  * which is a working link rather than a grid that never fills.
  */
 export const FEED_ENDPOINT = '/api/instagram'
+
+/**
+ * The privacy policy: a plain page in public/, at the URL the WordPress policy
+ * had. Linked from the footer and from both places the site collects details —
+ * the enquiry form and HatBot — which is where the notice is owed.
+ */
+export const PRIVACY_URL = `${import.meta.env.BASE_URL}privacy-policy/`
 export const INSTAGRAM_URL = 'https://www.instagram.com/socialhat.media'
 
 /**

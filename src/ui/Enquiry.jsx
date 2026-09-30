@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ENQUIRY_ENDPOINT } from '../config'
+import { ENQUIRY_ENDPOINT, PRIVACY_URL } from '../config'
 import { track } from '../analytics'
 
 /**
@@ -527,7 +527,8 @@ export function Enquiry() {
                     </button>
                     <p className="enquiry-note">
                       No maths test. Straight to the {active.label.toLowerCase()} desk, usually
-                      answered the same working day.
+                      answered the same working day. <a href={PRIVACY_URL}>How we handle your
+                      details</a>.
                     </p>
                   </div>
 
