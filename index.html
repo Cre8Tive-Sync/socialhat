@@ -111,6 +111,29 @@
         }
       }
     </script>
+
+    <!--
+      Google Analytics 4 — the same property the WordPress site reports to, so
+      the traffic history carries straight on across the switch.
+
+      On the real domain only. Staging, previews and `npm run dev` would
+      otherwise be counted as visitors and muddy the numbers the business reads.
+      Enquiries and HatBot leads are sent as `generate_lead` (src/analytics.js).
+    -->
+    <script>
+      if (/^(www\.)?socialhat\.com\.au$/.test(location.hostname)) {
+        window.dataLayer = window.dataLayer || []
+        window.gtag = function () {
+          dataLayer.push(arguments)
+        }
+        gtag('js', new Date())
+        gtag('config', 'G-4D0S58X4LS')
+        const tag = document.createElement('script')
+        tag.async = true
+        tag.src = 'https://www.googletagmanager.com/gtag/js?id=G-4D0S58X4LS'
+        document.head.appendChild(tag)
+      }
+    </script>
   </head>
   <body>
     <!--

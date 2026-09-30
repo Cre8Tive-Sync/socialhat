@@ -1,0 +1,59 @@
+# SiteGround serves the site through nginx in front of Apache; this is the
+# Apache half. Copied into dist/ by scripts/stage-php.mjs.
+
+Options -Indexes
+DirectoryIndex index.html
+
+# The frontend calls /api/chat, /api/instagram and /api/enquiry on every host.
+# Here those are PHP files, so the extensionless URL is mapped onto them and
+# src/config.js does not need to know which host it is on.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^api/(chat|instagram|enquiry)/?$ api/$1.php [L]
+
+  # ---------------------------------------------------------------------
+  # The WordPress site this replaces. Every page in its sitemap (All in One
+  # SEO, September 2026) has search ranking and inbound links; a 404 throws
+  # both away, a 301 hands them on. Each goes to the section that now does
+  # its job. NE keeps the # from being escaped into %23.
+  # ---------------------------------------------------------------------
+  RewriteRule ^contact-us/?$ /#enquiry [R=301,NE,NC,L]
+  RewriteRule ^(content-creation-perth|video-production|online-video-creation|social-media-management|social-media-marketing|social-media-setups|drone-services|website-design|google-ads-and-commercial-campaigns|marketing-strategy|copywriting|seo|digital-signage-hosts|digi-screens|digital-screens)/?$ /#services [R=301,NE,NC,L]
+  RewriteRule ^recent-work/?$ /#work [R=301,NE,NC,L]
+  RewriteRule ^2020/06/18/social-hat-films-online-campaign-for-telstra/?$ /#work [R=301,NE,NC,L]
+  RewriteRule ^about/?$ /#about [R=301,NE,NC,L]
+  RewriteRule ^blog/?$ / [R=301,NC,L]
+
+  # Everything else in the old sitemap is the theme's demo content ("A nice
+  # post", lorem ipsum from 2009-2015) and its categories and tags, plus
+  # WordPress's own machinery. 410 Gone tells search engines to drop them for
+  # good, rather than keep re-checking a 404.
+  RewriteRule ^(20[0-9][0-9]/[0-9][0-9]/[0-9][0-9]/|category/|tag/|feed/?$|comments/feed/?$|wp-|xmlrpc\.php$) - [G,NC,L]
+</IfModule>
+
+# api/_lib.php and api/_knowledge.php are included, never requested. The
+# knowledge file holds HatBot's instructions — the one thing a visitor is meant
+# to be able to read the answers of, and not the source.
+<FilesMatch "^_">
+  Require all denied
+</FilesMatch>
+
+# The chat reply is a Server-Sent Event stream. Compressing it makes Apache
+# buffer it, and a buffered stream arrives all at once.
+SetEnvIf Request_URI "^/api/chat" no-gzip=1 dont-vary=1
+
+AddType model/gltf-binary .glb
+AddType application/wasm .wasm
+
+<IfModule mod_headers.c>
+  # Vite puts a content hash in every filename under assets/, so a changed file
+  # is a new URL and the old one can be cached for good.
+  <If "%{REQUEST_URI} =~ m#^/assets/#">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+  # The page itself is what points at those hashes, so it must always be
+  # rechecked, or a deploy is invisible until the cache expires.
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CHAT_ENDPOINT, MARK_SRC } from '../config'
+import { CHAT_ENDPOINT, MARK_SRC, PRIVACY_URL } from '../config'
 import { useLive, usePhase } from '../hooks/usePhase'
 import { Assistant } from './Assistant'
 import { Enquiry } from './Enquiry'
@@ -1243,7 +1243,12 @@ function SiteFooter() {
         </div>
 
         <div className="footer-bottom">
-          <span>&copy; {new Date().getFullYear()} SocialHat, Floreat, Perth WA.</span>
+          <span>
+            &copy; {new Date().getFullYear()} SocialHat, Floreat, Perth WA. &middot;{' '}
+            <a className="footer-privacy" href={PRIVACY_URL}>
+              Privacy policy
+            </a>
+          </span>
           <span>Image is everything, the message is the key.</span>
         </div>
       </div>

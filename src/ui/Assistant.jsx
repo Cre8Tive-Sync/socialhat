@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CHAT_ENDPOINT, CHAT_GREETING, CHAT_NUDGE, CHAT_NUDGE_DELAY } from '../config'
+import { CHAT_ENDPOINT, CHAT_GREETING, CHAT_NUDGE, CHAT_NUDGE_DELAY, PRIVACY_URL } from '../config'
+import { track } from '../analytics'
 
 /**
  * HatBot — deliverable 03.
@@ -251,7 +252,8 @@ export function Assistant({ awake }) {
 
           <p className="ai-fineprint">
             HatBot is an automated assistant, not a person, and it can get things wrong. For
-            anything that matters, call 08 9285 0811.
+            anything that matters, call 08 9285 0811. What you type is sent to an AI service to
+            answer — <a href={PRIVACY_URL}>privacy policy</a>.
           </p>
         </div>
 
@@ -296,6 +298,8 @@ function act(event) {
   if (event.name === 'open_enquiry_form') {
     window.dispatchEvent(new CustomEvent('socialhat:enquiry', { detail: { path: event.path } }))
   }
+  // The server only sends this once the lead has actually been delivered.
+  if (event.name === 'lead_captured') track('generate_lead', { method: 'hatbot' })
 }
 
 /* ==========================================================================

@@ -8,6 +8,7 @@
     "dev": "vite",
     "prebuild": "node scripts/gltf-to-glb.mjs --if-missing && node scripts/draco-compress.mjs --if-missing && node scripts/copy-draco-decoder.mjs",
     "build": "vite build",
+    "build:siteground": "npm run build && node scripts/stage-php.mjs",
     "preview": "vite preview",
     "pack-model": "node scripts/gltf-to-glb.mjs && node scripts/draco-compress.mjs && node scripts/copy-draco-decoder.mjs"
   },

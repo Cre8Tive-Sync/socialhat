@@ -67,12 +67,12 @@ export const PRESERVE_AUTHORED_FRAMING = true
 /**
  * Where the enquiry form POSTs its JSON.
  *
- * Empty until the host is decided — the form then falls back to composing the
- * same payload as a `mailto:` to the inbox its path routes to, so it works and
- * is testable today without a server. Set this (Netlify/Vercel function,
- * Formspree, whatever) and the fallback drops out with no other change.
+ * On SiteGround that is server/public/api/enquiry.php, which emails it to the
+ * path's inbox; in `npm run dev`, api/enquiry.js, which prints it. Absolute,
+ * like CHAT_ENDPOINT. Set to '' and the form falls back to composing the same
+ * payload as a `mailto:` — the right setting for a host with no backend.
  */
-export const ENQUIRY_ENDPOINT = ''
+export const ENQUIRY_ENDPOINT = '/api/enquiry'
 
 /**
  * Where the assistant talks to [api/chat.js](../api/chat.js).
@@ -121,6 +121,13 @@ export const CHAT_NUDGE = "Hi, I'm HatBot. Got a question? Just ask me."
  * which is a working link rather than a grid that never fills.
  */
 export const FEED_ENDPOINT = '/api/instagram'
+
+/**
+ * The privacy policy: a plain page in public/, at the URL the WordPress policy
+ * had. Linked from the footer and from both places the site collects details —
+ * the enquiry form and HatBot — which is where the notice is owed.
+ */
+export const PRIVACY_URL = `${import.meta.env.BASE_URL}privacy-policy/`
 export const INSTAGRAM_URL = 'https://www.instagram.com/socialhat.media'
 
 /**

@@ -57,6 +57,25 @@ export default function App() {
     document.getElementById('boot')?.remove()
   }, [])
 
+  // Arriving on a link to a section — /#enquiry, /#work, and every old
+  // WordPress page, which redirects to one of these. The browser tries to jump
+  // to the fragment while #root is still empty, finds nothing, and leaves the
+  // visitor at the top of a six-screen film. So the jump is made here, once the
+  // sections exist, and instantly: `scroll-behavior: smooth` would play the
+  // whole film past them on the way down.
+  //
+  // Measured through offsetTop, not getBoundingClientRect. At the top of the
+  // page the site is transformed for the handover, and a transformed box is not
+  // where the section will sit once the page is scrolled there.
+  useEffect(() => {
+    const el = document.getElementById(decodeURIComponent(window.location.hash.slice(1)))
+    if (!el) return
+    let y = 0
+    for (let node = el; node; node = node.offsetParent) y += node.offsetTop
+    const clearance = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0
+    requestAnimationFrame(() => window.scrollTo({ top: y - clearance, behavior: 'instant' }))
+  }, [])
+
   return (
     <>
       <span id="top" />

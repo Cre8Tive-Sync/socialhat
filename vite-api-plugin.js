@@ -12,7 +12,7 @@
  */
 
 /** Mounted routes. The path is `/api/<name>`, served from `api/<name>.js`. */
-const ROUTES = ['chat', 'instagram']
+const ROUTES = ['chat', 'instagram', 'enquiry']
 
 export function apiRoutes() {
   return {

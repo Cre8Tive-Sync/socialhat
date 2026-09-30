@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ENQUIRY_ENDPOINT } from '../config'
+import { ENQUIRY_ENDPOINT, PRIVACY_URL } from '../config'
+import { track } from '../analytics'
 
 /**
  * The smart enquiry form — deliverable 02.
@@ -384,6 +385,7 @@ export function Enquiry() {
         body: JSON.stringify(payload),
       })
       setStatus(res.ok ? 'sent' : 'error')
+      if (res.ok) track('generate_lead', { method: 'enquiry_form', enquiry_path: active.id })
     } catch {
       setStatus('error')
     }
@@ -525,7 +527,8 @@ export function Enquiry() {
                     </button>
                     <p className="enquiry-note">
                       No maths test. Straight to the {active.label.toLowerCase()} desk, usually
-                      answered the same working day.
+                      answered the same working day. <a href={PRIVACY_URL}>How we handle your
+                      details</a>.
                     </p>
                   </div>
 
