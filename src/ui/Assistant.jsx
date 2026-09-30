@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CHAT_ENDPOINT, CHAT_GREETING, CHAT_NUDGE, CHAT_NUDGE_DELAY } from '../config'
+import { track } from '../analytics'
 
 /**
  * HatBot — deliverable 03.
@@ -296,6 +297,8 @@ function act(event) {
   if (event.name === 'open_enquiry_form') {
     window.dispatchEvent(new CustomEvent('socialhat:enquiry', { detail: { path: event.path } }))
   }
+  // The server only sends this once the lead has actually been delivered.
+  if (event.name === 'lead_captured') track('generate_lead', { method: 'hatbot' })
 }
 
 /* ==========================================================================
