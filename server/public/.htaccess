@@ -10,6 +10,25 @@ DirectoryIndex index.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteRule ^api/(chat|instagram|enquiry)/?$ api/$1.php [L]
+
+  # ---------------------------------------------------------------------
+  # The WordPress site this replaces. Every page in its sitemap (All in One
+  # SEO, September 2026) has search ranking and inbound links; a 404 throws
+  # both away, a 301 hands them on. Each goes to the section that now does
+  # its job. NE keeps the # from being escaped into %23.
+  # ---------------------------------------------------------------------
+  RewriteRule ^contact-us/?$ /#enquiry [R=301,NE,NC,L]
+  RewriteRule ^(content-creation-perth|video-production|online-video-creation|social-media-management|social-media-marketing|social-media-setups|drone-services|website-design|google-ads-and-commercial-campaigns|marketing-strategy|copywriting|seo|digital-signage-hosts|digi-screens|digital-screens)/?$ /#services [R=301,NE,NC,L]
+  RewriteRule ^recent-work/?$ /#work [R=301,NE,NC,L]
+  RewriteRule ^2020/06/18/social-hat-films-online-campaign-for-telstra/?$ /#work [R=301,NE,NC,L]
+  RewriteRule ^about/?$ /#about [R=301,NE,NC,L]
+  RewriteRule ^blog/?$ / [R=301,NC,L]
+
+  # Everything else in the old sitemap is the theme's demo content ("A nice
+  # post", lorem ipsum from 2009-2015) and its categories and tags, plus
+  # WordPress's own machinery. 410 Gone tells search engines to drop them for
+  # good, rather than keep re-checking a 404.
+  RewriteRule ^(20[0-9][0-9]/[0-9][0-9]/[0-9][0-9]/|category/|tag/|feed/?$|comments/feed/?$|wp-|xmlrpc\.php$) - [G,NC,L]
 </IfModule>
 
 # api/_lib.php and api/_knowledge.php are included, never requested. The
