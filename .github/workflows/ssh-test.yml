@@ -1,0 +1,32 @@
+name: SSH connection test (temporary)
+
+# Temporary: checks whether GitHub's runners can reach SiteGround over SSH,
+# because the developer's own network is blocked by SiteGround's protection.
+# Read-only. Delete once the answer is known.
+
+on:
+  push:
+    branches: [feature/siteground-backend]
+    paths: ['.github/workflows/ssh-test.yml']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Connect and look around
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.SITEGROUND_SSH_KEY }}" > ~/.ssh/siteground
+          chmod 600 ~/.ssh/siteground
+          ssh-keyscan -p 18765 sm31.siteground.biz >> ~/.ssh/known_hosts 2>/dev/null
+          echo "runner IP: $(curl -s https://api.ipify.org)"
+          ssh -i ~/.ssh/siteground -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=20 -p 18765 \
+            u682-4bxbsdxbreby@sm31.siteground.biz '
+              echo "CONNECTED as $(whoami), home=$HOME"
+              echo "--- ~/www:"; ls ~/www
+              echo "--- new.socialhat.com.au:"; ls -la ~/www/new.socialhat.com.au
+              echo "--- its public_html:"; ls -la ~/www/new.socialhat.com.au/public_html
+              echo "--- wordpress there? $(test -e ~/www/new.socialhat.com.au/public_html/wp-config.php && echo YES || echo no)"
+              echo "--- tools:"; command -v rsync; php -v | head -1
+              php -m | grep -iE "^(curl|mbstring|openssl)$" | tr "\n" " "; echo
+            '
