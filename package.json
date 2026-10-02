@@ -10,6 +10,7 @@
     "build": "vite build",
     "build:siteground": "npm run build && node scripts/stage-php.mjs",
     "preview": "vite preview",
+    "test": "node scripts/test-fallback.mjs",
     "pack-model": "node scripts/gltf-to-glb.mjs && node scripts/draco-compress.mjs && node scripts/copy-draco-decoder.mjs"
   },
   "dependencies": {

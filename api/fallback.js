@@ -33,12 +33,12 @@ const OFFER_FORM = 'Want me to open the enquiry form for you?'
 export const TOPICS = [
   {
     name: 'human',
-    match: /\b(complain|complaint|invoice|refund|bill(ing)?|existing (job|project)|my (job|project|account)|speak to (a|someone)|real person|human)\b/,
+    match: /\b(complain\w*|invoices?|refunds?|bill(s|ing)?|existing (job|project)|my (job|project|account)|speak to (a|someone)|real person|human)\b/,
     reply: `That's one for the team directly. ${CONTACT}`,
   },
   {
     name: 'form',
-    match: /\b(form|quote|enquir|inquir|get in touch|call me|contact me|book|start a project)\b/,
+    match: /\b(forms?|quotes?|enquir\w*|inquir\w*|get in touch|call me|contact me|book(ings?)?|start a project)\b/,
     path: 'marketing',
     guess: true,
     action: true,
@@ -46,7 +46,7 @@ export const TOPICS = [
   },
   {
     name: 'host',
-    match: /\b(earn|income|revenue|make money|host|my (shop|cafe|café|venue|clinic|gym|salon|store|business))\b.*\b(screen|sign|display|tv)|\b(screen|sign|display|tv)\b.*\b(earn|income|revenue|make money|my (shop|cafe|café|venue|clinic|gym|salon|store))\b/,
+    match: /\b(earn|income|revenue|make money|host|my (shop|cafe|café|venue|clinic|gym|salon|store|business))\b.*\b(screen|sign|display|tv)|\b(screens?|signs?|signage|displays?|tvs?)\b.*\b(earn|income|revenue|make money|my (shop|cafe|café|venue|clinic|gym|salon|store))\b/,
     path: 'host',
     reply:
       "Yes — that's SocialHat's screen host program. They install a screen in your venue, manage the content remotely, and you earn from the advertising on it while also promoting your own deals. You don't have to update anything yourself. " +
@@ -54,7 +54,7 @@ export const TOPICS = [
   },
   {
     name: 'advertise',
-    match: /\b(advertis\w*|campaign|promote)\b.*\b(screen|sign\w*|display)|\b(screen|sign\w*|display)\b.*\b(advertis\w*|campaign|promote)\b/,
+    match: /\b(advertis\w*|campaigns?|promot\w*)\b.*\b(screen|sign\w*|display)|\b(screens?|sign\w*|displays?)\b.*\b(advertis\w*|campaigns?|promot\w*)\b/,
     path: 'advertise',
     reply:
       'SocialHat runs digital screens in venues across Perth, and you can put your campaign on them — choosing the suburbs and audience you want to reach and how long it runs. If your artwork is not ready, they can make it too. ' +
@@ -62,7 +62,7 @@ export const TOPICS = [
   },
   {
     name: 'signage',
-    match: /\b(screen|screens|signage|digital sign|display|tv)\b/,
+    match: /\b(screens?|signage|digital signs?|displays?|tvs?)\b/,
     reply:
       "SocialHat's digital signage works two ways. If you own a venue, they install a screen and you earn from the ads on it. If you want to advertise, your campaign plays on their screens across Perth. Which one are you after?",
   },
@@ -75,7 +75,7 @@ export const TOPICS = [
   },
   {
     name: 'website',
-    match: /\b(website|web site|site|web design|web dev\w*|landing page|redesign|wordpress|shopify|online store)\b/,
+    match: /\b(websites?|web sites?|sites?|web design|web dev\w*|landing pages?|redesign\w*|wordpress|shopify|online stores?)\b/,
     path: 'website',
     reply:
       'Yes, SocialHat builds websites — new builds, redesigns, and rescues of sites that have stopped working. Everything is mobile-first and built to rank on Google. ' +
@@ -83,7 +83,7 @@ export const TOPICS = [
   },
   {
     name: 'ads',
-    match: /\b(google ads|ads|adwords|ppc|advertising|advertise|paid)\b/,
+    match: /\b(google ads|ads?|adwords|ppc|advertis\w*|paid)\b/,
     path: 'marketing',
     reply:
       "Yes — SocialHat runs Google Ads and other advertising campaigns, and they keep a close eye on the numbers daily rather than monthly. " +
@@ -99,19 +99,19 @@ export const TOPICS = [
   },
   {
     name: 'content',
-    match: /\b(video|videos|photo|photos|photography|photographer|shoot|filming|film|content|reels?|tiktok)\b/,
+    match: /\b(videos?|photos?|photograph\w*|shoots?|filming|films?|content|reels?|tiktok)\b/,
     path: 'marketing',
     reply: 'Yes — SocialHat makes video and photography built for social media, from the shoot through to the final edit. ' + OFFER_FORM,
   },
   {
     name: 'social',
-    match: /\b(social media|social|instagram|facebook|linkedin|followers|posting|posts)\b/,
+    match: /\b(social media|social|instagram|facebook|linkedin|followers?|posting|posts?)\b/,
     path: 'marketing',
     reply: 'Yes — SocialHat manages social media: strategy, setting up accounts, and the day-to-day running across platforms. ' + OFFER_FORM,
   },
   {
     name: 'seo',
-    match: /\b(seo|search engine|rank|ranking|copywriting|copy)\b/,
+    match: /\b(seo|search engines?|rank\w*|copywrit\w*|copy)\b/,
     path: 'marketing',
     reply: 'Yes — SocialHat does SEO and copywriting, usually alongside a website or a campaign. ' + OFFER_FORM,
   },
@@ -122,7 +122,7 @@ export const TOPICS = [
   },
   {
     name: 'services',
-    match: /\b(what do you do|services|what can you|help me with|offer)\b/,
+    match: /\b(what do you do|services?|what can you|help me with|offer\w*)\b/,
     reply:
       'SocialHat is a Perth marketing agency: websites, advertising campaigns, video and photo content, social media management, digital signage, drone filming, and SEO. What are you working on?',
   },

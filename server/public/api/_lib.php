@@ -28,6 +28,17 @@ function private_dir(): string
     return getenv('SOCIALHAT_PRIVATE') ?: dirname(__DIR__, 2) . '/private';
 }
 
+/**
+ * Errors are logged to private/, not to the `php_errorlog` PHP would otherwise
+ * write beside the script — which is inside the web root. The log is where a
+ * failed enquiry's name and email are kept so it can be recovered, so it has to
+ * be somewhere no URL reaches. SiteGround happens to refuse requests for that
+ * file; this does not depend on it.
+ */
+if (is_dir(private_dir()) && is_writable(private_dir())) {
+    @ini_set('error_log', private_dir() . '/php-error.log');
+}
+
 function env(string $name): ?string
 {
     static $file = null;
