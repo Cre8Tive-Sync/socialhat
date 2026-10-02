@@ -38,6 +38,12 @@ DirectoryIndex index.html
   Require all denied
 </FilesMatch>
 
+# PHP's own error logs, should one ever be written inside the web root. They
+# can hold the contact details of an enquiry that failed to send.
+<FilesMatch "^(php_errorlog|error_log|php-error\.log)$">
+  Require all denied
+</FilesMatch>
+
 # The chat reply is a Server-Sent Event stream. Compressing it makes Apache
 # buffer it, and a buffered stream arrives all at once.
 SetEnvIf Request_URI "^/api/chat" no-gzip=1 dont-vary=1
