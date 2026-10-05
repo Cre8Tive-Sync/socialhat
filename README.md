@@ -497,6 +497,16 @@ any target that is not a `public_html` or that contains WordPress, because
 node scripts/smoke-chat.mjs --url https://new.socialhat.com.au
 ```
 
+**The live site is a separate, manual workflow**,
+[deploy-production.yml](.github/workflows/deploy-production.yml), with four
+actions: `status`, `prepare`, `go-live` and `rollback`. `prepare` uploads a
+build to `release-next/` beside `public_html`; `go-live` swaps it in by rename
+([server/release.sh](server/release.sh)) and keeps what was live — the first
+time, the whole WordPress site — so `rollback` is the same rename in reverse.
+The old media library is carried across with hard links and served as plain
+files, so links to `/wp-content/uploads/…` keep working. The step-by-step is in
+[GO-LIVE.md](GO-LIVE.md).
+
 ## Tuning
 
 | Setting | Where | Default | Effect |

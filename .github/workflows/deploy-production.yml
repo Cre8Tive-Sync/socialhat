@@ -1,0 +1,100 @@
+name: Production (socialhat.com.au)
+
+# The live site. Run by hand only, from the Actions tab: Run workflow -> pick an
+# action. Nothing here is triggered by a push.
+#
+#   status    What is live, what is waiting, what can be restored. Changes nothing.
+#   prepare   Builds the site and uploads it to release-next/ beside public_html.
+#             The live site is not touched; this can be run as often as you like.
+#   go-live   Swaps release-next/ in as public_html/. The site that was live is
+#             kept, whole, beside it. Needs `confirm`.
+#   rollback  Puts the previous site back. Needs `confirm`.
+#
+# The swap itself is server/release.sh, which this pipes over SSH — the logic
+# lives there, where it can be read and tested on its own.
+#
+# Uses the same SITEGROUND_HOST / _PORT / _USER variables and SITEGROUND_SSH_KEY
+# secret as the staging deploy. Secrets for the live site are not deployed from
+# here: they live in private/secrets.php beside public_html on the server.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do
+        type: choice
+        options: [status, prepare, go-live, rollback]
+        default: status
+      confirm:
+        description: For go-live and rollback, type the domain — socialhat.com.au
+        type: string
+        required: false
+
+concurrency:
+  group: siteground-production
+  cancel-in-progress: false
+
+jobs:
+  production:
+    runs-on: ubuntu-latest
+    environment:
+      name: siteground-production
+      url: https://socialhat.com.au
+    env:
+      ACTION: ${{ inputs.action }}
+      CONFIRM: ${{ inputs.confirm }}
+      HOST: ${{ vars.SITEGROUND_HOST }}
+      PORT: ${{ vars.SITEGROUND_PORT || '18765' }}
+      USER: ${{ vars.SITEGROUND_USER }}
+      SITE: ${{ vars.SITEGROUND_PROD_SITE || 'www/socialhat.com.au' }}
+    steps:
+      # Before anything is built or connected to: the two actions that change
+      # what visitors see need the domain typed out, so neither can be the
+      # result of picking the wrong item in a dropdown.
+      - name: Check confirmation
+        if: inputs.action == 'go-live' || inputs.action == 'rollback'
+        run: |
+          if [ "$CONFIRM" != "socialhat.com.au" ]; then
+            echo "::error::'$ACTION' changes the live site. Type socialhat.com.au in the confirm box to proceed."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        if: inputs.action == 'prepare'
+        with:
+          node-version: 20
+          cache: npm
+
+      - if: inputs.action == 'prepare'
+        run: npm ci
+
+      - if: inputs.action == 'prepare'
+        run: npm test
+
+      # No --staging here: that flag adds the noindex header, and the real site
+      # has to be indexable.
+      - if: inputs.action == 'prepare'
+        run: npm run build:siteground
+
+      - name: Load SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.SITEGROUND_SSH_KEY }}" > ~/.ssh/siteground
+          chmod 600 ~/.ssh/siteground
+          ssh-keyscan -p "$PORT" "$HOST" >> ~/.ssh/known_hosts
+
+      # Into release-next/, never public_html: --delete here can only ever
+      # remove files from a folder that is not being served.
+      - name: Upload the build to release-next
+        if: inputs.action == 'prepare'
+        run: |
+          grep -q 'X-Robots-Tag' dist/.htaccess && { echo "::error::This build carries the staging noindex header."; exit 1; }
+          ssh -i ~/.ssh/siteground -p "$PORT" "$USER@$HOST" "mkdir -p '$SITE/release-next'"
+          rsync -rlz --delete -e "ssh -i ~/.ssh/siteground -p $PORT" dist/ "$USER@$HOST:$SITE/release-next/"
+
+      - name: ${{ inputs.action == 'prepare' && 'Show status' || inputs.action }}
+        run: |
+          REMOTE_ACTION=$([ "$ACTION" = "prepare" ] && echo status || echo "$ACTION")
+          ssh -i ~/.ssh/siteground -p "$PORT" "$USER@$HOST" "bash -s -- '$REMOTE_ACTION' '$SITE'" < server/release.sh | tee -a "$GITHUB_STEP_SUMMARY"

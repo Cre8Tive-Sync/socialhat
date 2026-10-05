@@ -1,0 +1,2 @@
+# Shell scripts are piped to a Linux server over SSH; a CRLF in one breaks it.
+*.sh text eol=lf
