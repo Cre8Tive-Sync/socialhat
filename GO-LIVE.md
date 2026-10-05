@@ -20,8 +20,10 @@ Do not go live until all of these are true.
       enquiry from staging has arrived in the Microsoft inbox, not junk.
 - [ ] A time is agreed with the client and Tam. Pick a quiet hour.
 
-The Instagram token is not a blocker. Without it the feed section shows the
-"follow us" card, and it can be added to `private/secrets.php` later.
+An Instagram token is not needed. The feed section is off the page; the footer
+links to the account. If the feed is wanted later, put `<Feed />` back in
+`src/ui/Site.jsx`, add the token to `private/secrets.php`, and add Instagram to
+the privacy policy.
 
 ## On the day
 

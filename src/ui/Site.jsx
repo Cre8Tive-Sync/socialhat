@@ -80,11 +80,12 @@ export function Site({ style }) {
         <Services awake={awake} />
         <Work />
         <Numbers />
-        {/* The Instagram feed (./Feed) is off the page: GitHub Pages cannot run
-            api/instagram.js, so it could only ever show its lone follow card.
-            The account is still linked from the footer. To restore it, host
-            somewhere that runs the api/ functions, set INSTAGRAM_TOKEN, and put
-            <Feed /> back here along with its import. */}
+        {/* The Instagram feed (./Feed) is off the page. It was taken off when the
+            site sat on a host that could not run the endpoint; SiteGround can,
+            so what it waits on now is a token. The account is still linked from
+            the footer. To restore it: set INSTAGRAM_TOKEN in private/secrets.php,
+            put <Feed /> back here along with its import, and add Instagram to
+            the privacy policy, which describes only what the page does. */}
         <Crew />
         <Ask />
         <Enquiry />
