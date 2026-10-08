@@ -45,7 +45,10 @@
 }
 
 /* ---------- the handover ----------
-   How the site arrives out of the last frame of the film.
+   How the site arrives out of the last frame of the film. The film's half is a
+   camera move (CameraRig): it dives into the site on BUILD's big screen until
+   the page on it is the whole frame. This half comes up through that frame,
+   only once the camera has landed — nothing of it shows during the flight.
 
    Two transforms doing two unrelated jobs on one element:
 
@@ -58,10 +61,10 @@
      Keyed to `--handoff`, the exact number, never the damped one — lag here is
      drift, and drift here is the slide we are getting rid of.
 
-   scale — the arrival. The site comes up out of the middle of the frame,
-     origin at the centre of the screen (50vh down from the site's own top,
-     which is where the translate above has parked it), so it grows into place
-     from the same point the ink is flooding out of.
+   scale — the arrival. The site grows into place from the centre of the
+     screen (50vh down from the site's own top, which is where the translate
+     above has parked it) — the same point the camera is pushing in on, so it
+     reads as the end of the same move.
 
    Both are gone the moment the site owns the screen: a transform on this
    element makes it the containing block for the fixed top bar, the grain and
@@ -72,11 +75,11 @@
 .site {
   transform:
     translate3d(0, calc((var(--handoff, 0) - 1) * var(--handoff-travel, 0px)), 0)
-    scale(calc(0.96 + 0.04 * clamp(0, calc(var(--reveal, 0) * 1.9 - 0.4), 1)));
+    scale(calc(0.96 + 0.04 * clamp(0, calc(var(--reveal, 0) * 3.6 - 2.6), 1)));
   transform-origin: 50% 50vh;
-  /* Invisible for the whole film — it is parked over the bottom of the shot
-     well before the handover starts — then up through the ink. */
-  opacity: clamp(0, calc(var(--reveal, 0) * 2.6 - 0.57), 1);
+  /* Invisible for the whole film and the camera's flight, then up through the
+     screen it lands on: 0 at a reveal of 0.72, 1 by 0.94. */
+  opacity: clamp(0, calc(var(--reveal, 0) * 4.5 - 3.24), 1);
   pointer-events: none;
 }
 
@@ -165,14 +168,14 @@
 
 /* ---------- top bar ----------
    Absent for the whole film — that shot swings from white sketch paper to a
-   dark room, and no single treatment survives both — then it arrives with the
-   ink on the handover, last of everything, once the site is already there.
+   dark room, and no single treatment survives both — then it arrives at the
+   end of the handover, last of everything, once the site is already there.
    `--reveal` comes off the root element.
 
    The blur is held back until the handover is over. A backdrop filter has to
    read back everything painted behind it on every frame it is visible, and the
    frames it would be visible for are exactly the ones where the site is coming
-   up through the ink — the most expensive frames on the page. */
+   up over a live 3D frame — the most expensive frames on the page. */
 .site .topbar {
   position: fixed;
   top: 0;
@@ -182,7 +185,7 @@
   padding: 18px 0;
   background: rgb(21 14 56 / 0.7);
   border-bottom: 1px solid var(--line);
-  opacity: clamp(0, calc(var(--reveal, 0) * 2.6 - 1.6), 1);
+  opacity: clamp(0, calc(var(--reveal, 0) * 6.6 - 5.6), 1);
   pointer-events: none;
 }
 
@@ -1444,7 +1447,7 @@
   letter-spacing: 0.04em;
   cursor: pointer;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
-  opacity: clamp(0, calc(var(--reveal, 0) * 2.6 - 1.6), 1);
+  opacity: clamp(0, calc(var(--reveal, 0) * 6.6 - 5.6), 1);
   pointer-events: none;
 }
 

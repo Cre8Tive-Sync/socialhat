@@ -6,8 +6,8 @@ dist
 # API keys. .env.example is the committed template.
 .env
 
-# Generated from scene.gltf by `npm run pack-model`
-public/models/scene.glb
+# Generated from socialhat.glb by `npm run pack-model`
+public/models/
 
 # Copied out of three by `npm run pack-model`
 public/draco/

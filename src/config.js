@@ -1,7 +1,7 @@
 /** Everything you'll realistically want to tweak lives here. */
 
-// Served straight from public/ — generated from scene.gltf by `npm run pack-model`.
-export const MODEL_URL = `${import.meta.env.BASE_URL}models/scene.glb`
+// Served straight from public/ — built from socialhat.glb by `npm run pack-model`.
+export const MODEL_URL = `${import.meta.env.BASE_URL}models/socialhat.glb`
 
 /**
  * Where DRACOLoader fetches its decoder from.
@@ -26,19 +26,29 @@ export const DRACO_DECODER_PATH = `${import.meta.env.BASE_URL}draco/`
  */
 export const MODEL_MB = __MODEL_MB__
 
-/** How many viewport-heights of scrolling the pinned hero occupies. */
-export const SCROLL_PAGES = 6
+/**
+ * Camera stops in the process scene: the wide shot, five stations, the wide
+ * shot again. Must match STOPS in src/three/stations.js.
+ */
+export const STOP_COUNT = 7
 
 /**
  * The handover — the moment the film's last frame becomes the website.
  *
- * It does not slide: the site is held still at the top of the screen and comes
- * up out of the centre of the frame, so the two halves cross at the middle of
- * the picture rather than at its bottom edge. Nothing has to travel a viewport,
- * which is why this is a fraction of one and not the whole thing — half a
- * screen of scroll is enough to read as deliberate and still land fast.
+ * It is a camera move: from the closing wide shot the camera swoops down into
+ * the big screen on BUILD, which is showing the site, until the screen is the
+ * whole frame — and the real site comes up through it. The site itself is held
+ * still at the top of the screen throughout, never sliding. A flight across the
+ * scene wants real scroll to play out over, so this is a viewport and a half.
  */
-export const HANDOFF_VIEWPORTS = 0.5
+export const HANDOFF_VIEWPORTS = 1.5
+
+/**
+ * How many viewport-heights of scrolling the pinned hero occupies: one viewport
+ * between each pair of stops, then the handover. The extra one is the hero's
+ * own last screen, which the site overlaps.
+ */
+export const SCROLL_PAGES = STOP_COUNT + HANDOFF_VIEWPORTS
 
 /** Where on the hero's travel the camera animation ends and the handover begins. */
 export const HANDOFF_START = (SCROLL_PAGES - 1 - HANDOFF_VIEWPORTS) / (SCROLL_PAGES - 1)
@@ -49,20 +59,25 @@ export const HANDOFF_START = (SCROLL_PAGES - 1 - HANDOFF_VIEWPORTS) / (SCROLL_PA
  *
  * The geometry — the site pinned dead still under the scroll — stays welded to
  * the raw scroll position, because any lag there is visible as drift. Only the
- * dissolve is damped: a wheel notch that jumps 100px mid-handover moves the
- * reveal a step, and this eases across it. Higher = tighter to the scrollbar.
+ * camera's dive and the dissolve are damped: a wheel notch that jumps 100px
+ * mid-handover moves the reveal a step, and this eases across it. Higher =
+ * tighter to the scrollbar.
  */
 export const HANDOFF_SMOOTHING = 9
 
-/** Scrub smoothing. Higher = the camera tracks the scrollbar more tightly. */
-export const SCROLL_SMOOTHING = 4
+/**
+ * How far into the gap between two stops a scroll has to go before it counts
+ * as asking for the next one, as a fraction of that gap. Below it, letting go
+ * settles back where you were; past it, the camera is already flying and the
+ * page settles on the next stop.
+ */
+export const STOP_COMMIT = 0.14
 
 /**
- * The camera was authored at a 1.49:1 aspect. On narrower viewports, widen the
- * vertical FOV so the intended horizontal framing survives instead of being
- * cropped off the sides. Set false for stock three.js behaviour (fixed yfov).
+ * Stiffness of the camera's flight between stops — the natural frequency of a
+ * critically damped spring, in rad/s. 5 lands a one-stop flight in about 1.1s.
  */
-export const PRESERVE_AUTHORED_FRAMING = true
+export const FLIGHT_STIFFNESS = 5
 
 /**
  * Where the enquiry form POSTs its JSON.
@@ -129,14 +144,6 @@ export const FEED_ENDPOINT = '/api/instagram'
  */
 export const PRIVACY_URL = `${import.meta.env.BASE_URL}privacy-policy/`
 export const INSTAGRAM_URL = 'https://www.instagram.com/socialhat.media'
-
-/**
- * Sign-off logo. This is the file you asked for — the #1D1F20 near-black mark.
- * If it disappears against the final shot, swap `-dark` for `-light` here: the
- * light file is the same artwork in #F2F2F3.
- */
-export const LOGO_SRC = `${import.meta.env.BASE_URL}images/socialhat_logo-dark.svg`
-export const LOGO_ALT = 'socialhat'
 
 /**
  * The brand mark — the SH monogram badge, cream on the indigo ground. Square

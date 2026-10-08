@@ -13,7 +13,7 @@ const root = path.dirname(fileURLToPath(import.meta.url))
 // to be maintained by a human at all. prebuild/predev generate the .glb before
 // this config is read, so the file is there; 0 means someone ran vite directly
 // and the curtain just omits the size.
-const modelPath = path.join(root, 'public', 'models', 'scene.glb')
+const modelPath = path.join(root, 'public', 'models', 'socialhat.glb')
 const modelMB = fs.existsSync(modelPath)
   ? Math.round(fs.statSync(modelPath).size / 1024 / 1024)
   : 0
@@ -37,7 +37,7 @@ export default defineConfig({
   // no client-side routing, so every document sits at the same depth.
   base: './',
   define: { __MODEL_MB__: JSON.stringify(modelMB) },
-  // scene.glb lives in public/, so it is served and copied verbatim rather than
+  // socialhat.glb lives in public/, so it is served and copied verbatim rather than
   // being pulled through the asset pipeline and hashed. Nothing to configure.
   server: { open: true },
 
