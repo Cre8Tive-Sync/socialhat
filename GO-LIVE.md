@@ -1,7 +1,8 @@
 # Going live on socialhat.com.au
 
-How to replace the WordPress site with the new one, check it, and put the old
-one back if anything is wrong. Everything is done from GitHub and SiteGround's
+How the WordPress site was replaced with the new one, how to check a release,
+and how to put the previous one back if anything is wrong. The first go-live
+was on 8 October 2026; the steps are kept for the record and for doing it again. Everything is done from GitHub and SiteGround's
 Site Tools; nothing needs a terminal.
 
 The switch is a rename on the server, not an upload over the top. The WordPress
@@ -94,10 +95,17 @@ once the problem is fixed.
 
 ## Afterwards
 
-- **Updates to the live site** are the same two buttons: **prepare**, then
-  **go-live**. Merging to `main` only updates the preview site. The live site
-  changes when someone presses go-live, and each go-live keeps the previous
-  version for one-step rollback.
+- **Updates to the live site are automatic.** Every merge to `main` is tested,
+  built and published to socialhat.com.au within a few minutes, the same as
+  the Vercel copy and the preview site. If the tests or the build fail, nothing
+  is published and the live site stays as it was. Each publish keeps the
+  previous version, so **rollback** always has something to go back to.
+- **Because a merge is a publish, only merge what is ready for the public.**
+  Half-finished work belongs on a branch; its pull request still gets a Vercel
+  preview link to look at.
+- **After a rollback, fix or revert the change before merging anything else.**
+  The next merge publishes whatever is on `main`, including the change that
+  was just rolled back.
 - **The old WordPress site** stays on the server as `public_html.wordpress`,
   off the web. Delete it, in Site Tools → File Manager, once everyone is sure
   nothing more is needed from it. A month is reasonable. Its media library

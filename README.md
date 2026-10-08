@@ -478,9 +478,11 @@ any target that is not a `public_html` or that contains WordPress, because
 node scripts/smoke-chat.mjs --url https://new.socialhat.com.au
 ```
 
-**The live site is a separate, manual workflow**,
-[deploy-production.yml](.github/workflows/deploy-production.yml), with four
-actions: `status`, `prepare`, `go-live` and `rollback`. `prepare` uploads a
+**The live site publishes on every merge to `main`**, through
+[deploy-production.yml](.github/workflows/deploy-production.yml): tests, build,
+then the swap below. A failing test or build publishes nothing. The same
+workflow can be run by hand, with the actions `status`, `release`, `prepare`,
+`go-live`, `rollback` and `purge`. `prepare` uploads a
 build to `release-next/` beside `public_html`; `go-live` swaps it in by rename
 ([server/release.sh](server/release.sh)) and keeps what was live — the first
 time, the whole WordPress site — so `rollback` is the same rename in reverse.
