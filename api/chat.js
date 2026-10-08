@@ -4,10 +4,12 @@ import { builtinReply } from './fallback.js'
 /**
  * The assistant's endpoint — deliverable 03.
  *
- * A Web-standard `Request` in, a Server-Sent Event stream out. That shape runs
- * unchanged on Vercel Edge, Netlify Functions v2 and Cloudflare Workers, and
- * [vite-api-plugin.js] serves it from the same file in `npm run dev`, so there
- * is one implementation rather than one per host.
+ * A Web-standard `Request` in, a Server-Sent Event stream out. This file is
+ * what `npm run dev` runs, through [vite-api-plugin.js]. The live site is on
+ * SiteGround, which runs PHP and not Node, so production is the port in
+ * server/public/api/chat.php — same contract, same provider chain, same
+ * fallback. A change to the behaviour here has to be made there as well; the
+ * prompt, tools and built-in answers are shared and need changing only once.
  *
  * The model is reached through a chain of free providers — Groq, NVIDIA,
  * then OpenRouter — which all speak the OpenAI chat completions format.
@@ -24,18 +26,16 @@ import { builtinReply } from './fallback.js'
  * almost immediately.
  */
 
-export const config = { runtime: 'edge' }
-
 /* ==========================================================================
    Limits
 
    This endpoint is public and unauthenticated, and every call costs money. The
    caps below are the cheap half of that problem — they bound one request. The
-   other half is rate limiting per IP, which belongs in the host's edge config
-   (Vercel Firewall, Netlify rate limits, a Cloudflare rule) rather than in
-   application code that a bot can simply call in parallel. Set one before this
-   goes live. The keys are all free tiers, so the worst a flood can do is
-   spend today's allowance — and then the built-in answers take over.
+   other half is rate limiting per IP. That is not in this file, which only
+   ever serves a developer's own machine; on the live site it is in chat.php,
+   which keeps a per-IP count on disk. The keys are all free tiers, so the
+   worst a flood can do is spend today's allowance — and then the built-in
+   answers take over.
    ========================================================================== */
 
 const MAX_TURNS = 4 // assistant turns per request, so a tool loop cannot run away
@@ -524,7 +524,7 @@ const SSE_HEADERS = {
   Connection: 'keep-alive',
 }
 
-/** Works under Vercel/Netlify (process.env) and Cloudflare/Deno (globalThis). */
+/** Reads from process.env, which vite.config.js fills from .env in dev. */
 function readEnv(name) {
   // Trimmed, because a key pasted into a dashboard with a trailing space or
   // newline fails upstream as "missing authentication", which says nothing

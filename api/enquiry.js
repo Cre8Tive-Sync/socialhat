@@ -1,15 +1,13 @@
 /**
- * The enquiry endpoint, for `npm run dev` and function hosts.
+ * The enquiry endpoint, for `npm run dev`.
  *
  * Production is SiteGround, where server/public/api/enquiry.php emails the
- * enquiry. This is its stand-in wherever Node runs: in dev it prints the
+ * enquiry. This is its stand-in on a developer's machine: it prints the
  * enquiry to the terminal and reports success, so the form's whole flow can be
- * exercised without sending mail; on a function host it forwards to
- * ENQUIRY_WEBHOOK, and with none set it says so with a 503 rather than
- * pretending — the form then shows the visitor the phone and email instead.
+ * exercised without sending mail. With ENQUIRY_WEBHOOK set it forwards there
+ * instead, and outside dev with none set it answers 503 rather than pretending
+ * — the form then shows the visitor the phone and email.
  */
-
-export const config = { runtime: 'edge' }
 
 const PATHS = ['marketing', 'website', 'host', 'advertise']
 

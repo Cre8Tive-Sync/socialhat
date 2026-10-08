@@ -12,11 +12,9 @@
  * visitor, so a page that fetched directly would spend the account's quota on
  * however many people happened to be reading. One cached call serves everyone.
  *
- * Same Web-standard shape as api/chat.js, so it runs on the same hosts and is
- * served in dev by the same plugin.
+ * Same Web-standard shape as api/chat.js, and served in dev by the same
+ * plugin. On the live site it is server/public/api/instagram.php.
  */
-
-export const config = { runtime: 'edge' }
 
 /** Posts to show. Six is two rows of three, which is what the grid is built for. */
 const LIMIT = 6

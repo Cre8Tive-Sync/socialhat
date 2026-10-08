@@ -1,14 +1,13 @@
 /**
  * Serves the `api/` handlers from the Vite dev server.
  *
- * The handler is written against the Web platform — a `Request` in, a streaming
- * `Response` out — because that is what Vercel Edge, Netlify Functions v2 and
- * Cloudflare Workers all take. Vite's dev server is Connect, which is Node's
- * older `(req, res)`. This is the adapter between the two, and it exists so
- * `npm run dev` exercises the same file production does instead of a mock.
+ * The handlers are written against the Web platform — a `Request` in, a
+ * streaming `Response` out. Vite's dev server is Connect, which is Node's older
+ * `(req, res)`. This is the adapter between the two, so `npm run dev` runs the
+ * real handlers rather than a mock.
  *
- * Dev only. In production the host runs the files in `api/` itself and never
- * loads this plugin.
+ * Dev only. The live site is on SiteGround, which runs the PHP ports in
+ * server/public/api/ and never loads this plugin or the files in `api/`.
  */
 
 /** Mounted routes. The path is `/api/<name>`, served from `api/<name>.js`. */
