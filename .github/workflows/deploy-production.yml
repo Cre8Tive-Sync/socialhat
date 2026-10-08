@@ -1,14 +1,23 @@
 name: Production (socialhat.com.au)
 
-# The live site. Run by hand only, from the Actions tab: Run workflow -> pick an
-# action. Nothing here is triggered by a push.
+# The live site.
+#
+# Every merge to main publishes: tests, build, upload beside the live site,
+# swap it in, clear SiteGround's cache. That is the `release` action, and a
+# push to main runs it with nobody pressing anything. If the tests or the build
+# fail, nothing is uploaded and the live site stays as it was.
+#
+# The same job can be run by hand, from the Actions tab: Run workflow -> pick
+# an action.
 #
 #   status    What is live, what is waiting, what can be restored. Changes nothing.
+#   release   What a merge does: prepare, then go-live. Needs `confirm`.
 #   prepare   Builds the site and uploads it to release-next/ beside public_html.
-#             The live site is not touched; this can be run as often as you like.
+#             The live site is not touched.
 #   go-live   Swaps release-next/ in as public_html/. The site that was live is
 #             kept, whole, beside it. Needs `confirm`.
-#   rollback  Puts the previous site back. Needs `confirm`.
+#   rollback  Puts the previous site back. Needs `confirm`. The next merge will
+#             publish again, so fix or revert the change that caused it first.
 #   purge     Clears SiteGround's page cache. go-live and rollback already do
 #             this; it is here for when a stale page turns up anyway.
 #
@@ -20,18 +29,22 @@ name: Production (socialhat.com.au)
 # here: they live in private/secrets.php beside public_html on the server.
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       action:
         description: What to do
         type: choice
-        options: [status, prepare, go-live, rollback, purge]
+        options: [status, release, prepare, go-live, rollback, purge]
         default: status
       confirm:
-        description: For go-live and rollback, type the domain — socialhat.com.au
+        description: For release, go-live and rollback, type the domain — socialhat.com.au
         type: string
         required: false
 
+# One at a time, and never cancelled part-way: a swap that is interrupted
+# between its two renames would leave the site with no public_html.
 concurrency:
   group: siteground-production
   cancel-in-progress: false
@@ -43,18 +56,19 @@ jobs:
       name: siteground-production
       url: https://socialhat.com.au
     env:
-      ACTION: ${{ inputs.action }}
+      # A push carries no inputs; it is always a release.
+      ACTION: ${{ inputs.action || 'release' }}
       CONFIRM: ${{ inputs.confirm }}
       HOST: ${{ vars.SITEGROUND_HOST }}
       PORT: ${{ vars.SITEGROUND_PORT || '18765' }}
       USER: ${{ vars.SITEGROUND_USER }}
       SITE: ${{ vars.SITEGROUND_PROD_SITE || 'www/socialhat.com.au' }}
     steps:
-      # Before anything is built or connected to: the two actions that change
-      # what visitors see need the domain typed out, so neither can be the
-      # result of picking the wrong item in a dropdown.
+      # By hand, the actions that change what visitors see need the domain typed
+      # out, so none can be the result of picking the wrong item in a dropdown.
+      # A merge needs no such thing: the merge was the decision.
       - name: Check confirmation
-        if: inputs.action == 'go-live' || inputs.action == 'rollback'
+        if: github.event_name == 'workflow_dispatch' && (inputs.action == 'release' || inputs.action == 'go-live' || inputs.action == 'rollback')
         run: |
           if [ "$CONFIRM" != "socialhat.com.au" ]; then
             echo "::error::'$ACTION' changes the live site. Type socialhat.com.au in the confirm box to proceed."
@@ -64,20 +78,20 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
-        if: inputs.action == 'prepare'
+        if: env.ACTION == 'release' || env.ACTION == 'prepare'
         with:
           node-version: 20
           cache: npm
 
-      - if: inputs.action == 'prepare'
+      - if: env.ACTION == 'release' || env.ACTION == 'prepare'
         run: npm ci
 
-      - if: inputs.action == 'prepare'
+      - if: env.ACTION == 'release' || env.ACTION == 'prepare'
         run: npm test
 
       # No --staging here: that flag adds the noindex header, and the real site
       # has to be indexable.
-      - if: inputs.action == 'prepare'
+      - if: env.ACTION == 'release' || env.ACTION == 'prepare'
         run: npm run build:siteground
 
       - name: Load SSH key
@@ -90,13 +104,19 @@ jobs:
       # Into release-next/, never public_html: --delete here can only ever
       # remove files from a folder that is not being served.
       - name: Upload the build to release-next
-        if: inputs.action == 'prepare'
+        if: env.ACTION == 'release' || env.ACTION == 'prepare'
         run: |
           grep -q 'X-Robots-Tag' dist/.htaccess && { echo "::error::This build carries the staging noindex header."; exit 1; }
           ssh -i ~/.ssh/siteground -p "$PORT" "$USER@$HOST" "mkdir -p '$SITE/release-next'"
           rsync -rlz --delete -e "ssh -i ~/.ssh/siteground -p $PORT" dist/ "$USER@$HOST:$SITE/release-next/"
 
-      - name: ${{ inputs.action == 'prepare' && 'Show status' || inputs.action }}
+      # release -> go-live, prepare -> status (to show what was uploaded);
+      # everything else is passed to the server as it is.
+      - name: Run on the server
         run: |
-          REMOTE_ACTION=$([ "$ACTION" = "prepare" ] && echo status || echo "$ACTION")
+          case "$ACTION" in
+            release) REMOTE_ACTION=go-live ;;
+            prepare) REMOTE_ACTION=status ;;
+            *)       REMOTE_ACTION=$ACTION ;;
+          esac
           ssh -i ~/.ssh/siteground -p "$PORT" "$USER@$HOST" "bash -s -- '$REMOTE_ACTION' '$SITE'" < server/release.sh | tee -a "$GITHUB_STEP_SUMMARY"
