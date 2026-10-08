@@ -269,10 +269,10 @@ bundled — a visitor can read the answers, not the instructions — and the API
 never leaves the function.
 
 **The endpoint.** [api/chat.js](api/chat.js) takes a Web-standard `Request` and
-returns a streaming SSE `Response`, which is the shape Vercel Edge, Netlify
-Functions v2 and Cloudflare Workers all accept.
+returns a streaming SSE `Response`.
 [vite-api-plugin.js](vite-api-plugin.js) adapts Connect's `(req, res)` to that
-same file in `npm run dev`, so there is one implementation and no mock.
+file in `npm run dev`, so development runs the real handler and no mock. The
+live site runs its PHP port, [chat.php](server/public/api/chat.php) (§12).
 
 The model is reached through [OpenRouter](https://openrouter.ai), in its
 OpenAI-compatible chat completions format, with plain `fetch` — no SDK. Set
@@ -308,9 +308,9 @@ than a blank one.
 the shape rather than trusting it: roles narrowed to user/assistant, content
 forced to a string, length and count capped, leading non-user turns dropped. A
 `system` role smuggled into the array would be an operator instruction written
-by a visitor. Per-IP **rate limiting is not in this code** and belongs in the
-host's edge config — a public unauthenticated LLM endpoint is a standing bill.
-Set one before launch.
+by a visitor. Per-IP **rate limiting is not in `api/chat.js`**, which only runs
+in development. On the live site it is in `chat.php` (§12) — a public
+unauthenticated LLM endpoint is a standing bill without one.
 
 ### 9. The portfolio
 

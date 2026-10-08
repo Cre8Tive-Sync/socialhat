@@ -96,13 +96,14 @@ once the problem is fixed.
 ## Afterwards
 
 - **Updates to the live site are automatic.** Every merge to `main` is tested,
-  built and published to socialhat.com.au within a few minutes, the same as
-  the Vercel copy and the preview site. If the tests or the build fail, nothing
+  built and published to socialhat.com.au within a few minutes, at the same
+  moment as the preview site (new.socialhat.com.au). If the tests or the build fail, nothing
   is published and the live site stays as it was. Each publish keeps the
   previous version, so **rollback** always has something to go back to.
 - **Because a merge is a publish, only merge what is ready for the public.**
-  Half-finished work belongs on a branch; its pull request still gets a Vercel
-  preview link to look at.
+  Half-finished work belongs on a branch. Nothing shows a change before it is
+  public — the preview site updates when the live one does — so check it on
+  your own machine first, with `npm run dev`.
 - **After a rollback, fix or revert the change before merging anything else.**
   The next merge publishes whatever is on `main`, including the change that
   was just rolled back.

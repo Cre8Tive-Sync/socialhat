@@ -2,7 +2,7 @@
  * Smoke test for HatBot — api/chat.js, end to end, against the real model.
  *
  *   node scripts/smoke-chat.mjs                       the local handler, with .env
- *   node scripts/smoke-chat.mjs --url https://socialhat.vercel.app
+ *   node scripts/smoke-chat.mjs --url https://new.socialhat.com.au   a deployed site (see below)
  *   node scripts/smoke-chat.mjs --runs 3              repeat the conversation cases
  *   node scripts/smoke-chat.mjs --model groq:openai/gpt-oss-120b   one provider and model (local only)
  *   node scripts/smoke-chat.mjs --builtin             no keys: the built-in answers only
@@ -12,6 +12,11 @@
  * here spends part of a free daily allowance, so the default run is small.
  *
  * Exits non-zero on any failure, so it can sit in CI or a pre-deploy step.
+ *
+ * Against the SiteGround sites, --url may be answered by SiteGround's bot check
+ * (a 202 with a captcha page) rather than by the endpoint, because this is a
+ * script and not a browser. That is the firewall, not a fault in HatBot; check
+ * a deployed site in a browser instead.
  */
 
 import fs from 'node:fs'
