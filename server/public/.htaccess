@@ -24,6 +24,14 @@ DirectoryIndex index.html
   RewriteRule ^about/?$ /#about [R=301,NE,NC,L]
   RewriteRule ^blog/?$ / [R=301,NC,L]
 
+  # The old site's media library survives the switch (server/release.sh carries
+  # it across), because email signatures, Google listings and other people's
+  # pages link straight to files in it. Served as files only: a script under
+  # an uploads folder is the classic way a WordPress site is taken over, and
+  # nothing in there has any business running.
+  RewriteRule ^wp-content/uploads/.*\.(php\d?|phtml|phar|cgi|pl|py|sh)$ - [F,NC,L]
+  RewriteRule ^wp-content/uploads/ - [L]
+
   # Everything else in the old sitemap is the theme's demo content ("A nice
   # post", lorem ipsum from 2009-2015) and its categories and tags, plus
   # WordPress's own machinery. 410 Gone tells search engines to drop them for
