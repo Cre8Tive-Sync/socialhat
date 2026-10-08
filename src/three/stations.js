@@ -107,6 +107,14 @@ export const STATIONS = [
 ]
 
 /**
+ * BUILD's big screen, the one with the site on it, in its own frame: centred on
+ * the origin, facing +Z. `chrome` is the share of its height the browser bar
+ * takes off the top of websiteTexture(); the handover's dive lands on the page
+ * below it.
+ */
+export const SITE_SCREEN = { width: 1.36, height: 0.85, chrome: 44 / 640 }
+
+/**
  * The close-up on a station, in its own frame: up and to the right of its
  * front, looking just left of centre so the platform sits right of the frame
  * and the copy has the left. `tweak` nudges one station's shot.

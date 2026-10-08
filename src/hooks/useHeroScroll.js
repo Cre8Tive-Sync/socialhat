@@ -5,11 +5,12 @@ import { LAST_STOP, rig } from '../three/rig'
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v)
 
 /**
- * How far through the handover the site starts taking clicks. Its opacity
- * reaches 1 at a *damped* reveal of 0.6, so this sits past that with room for
- * the damping to catch up — nothing is clickable before it is fully visible.
+ * How far through the handover the site starts taking clicks. It only comes up
+ * through the screen at the very end of the camera's dive — its opacity reaches
+ * 1 at a *damped* reveal of 0.95 — so clicks wait for the handover to finish:
+ * nothing is clickable before it is fully visible.
  */
-const LIVE_AT = 0.75
+const LIVE_AT = 1
 
 /**
  * The hero's geometry, shared with scrollToStop() below so the rail can jump
@@ -63,7 +64,8 @@ const committed = (pos, dir) => {
  *   --handoff — 0 until the last stop, then 0 to 1 across the handover. Exact,
  *               and welded to the scrollbar: it holds the site still under the
  *               scroll, and a damped value there would show up as drift.
- *   --reveal  — the same 0 to 1, damped. The *look* of the handover.
+ *   --reveal  — the same 0 to 1, damped. The *look* of the handover; also
+ *               written to rig.reveal, which the camera dives on.
  *
  * `data-phase` on the root goes scene → handoff → site, which is what the two
  * sets of chrome key off.
@@ -100,7 +102,10 @@ export function useHeroScroll(heroRef) {
       geometry.travel = hero.offsetHeight - window.innerHeight
     }
 
-    const paint = () => write('--reveal', reveal.current.toFixed(4))
+    const paint = () => {
+      rig.reveal = reveal.current
+      write('--reveal', reveal.current.toFixed(4))
+    }
 
     const tick = (now) => {
       const dt = Math.min(Math.max((now - last) / 1000, 0), 1 / 20)

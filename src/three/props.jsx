@@ -93,7 +93,8 @@ export function StationLabel({ index, position }) {
     const el = ref.current
     if (!el) return
     const { show, focus } = rig.stations[index]
-    const k = pop(Math.min(show, rig.wide), 0.05)
+    // Cleared off as the handover's dive sets off, so none sweep across the screen.
+    const k = pop(Math.min(show, rig.wide, 1 - rig.reveal * 3), 0.05)
     // Only touch the style when it changed: this is DOM, not a uniform.
     const value = Math.round(k * 1000) / 1000
     const lit = focus > 0.5

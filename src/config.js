@@ -33,22 +33,22 @@ export const MODEL_MB = __MODEL_MB__
 export const STOP_COUNT = 7
 
 /**
+ * The handover — the moment the film's last frame becomes the website.
+ *
+ * It is a camera move: from the closing wide shot the camera swoops down into
+ * the big screen on BUILD, which is showing the site, until the screen is the
+ * whole frame — and the real site comes up through it. The site itself is held
+ * still at the top of the screen throughout, never sliding. A flight across the
+ * scene wants real scroll to play out over, so this is a viewport and a half.
+ */
+export const HANDOFF_VIEWPORTS = 1.5
+
+/**
  * How many viewport-heights of scrolling the pinned hero occupies: one viewport
  * between each pair of stops, then the handover. The extra one is the hero's
  * own last screen, which the site overlaps.
  */
-export const SCROLL_PAGES = STOP_COUNT + 0.5
-
-/**
- * The handover — the moment the film's last frame becomes the website.
- *
- * It does not slide: the site is held still at the top of the screen and comes
- * up out of the centre of the frame, so the two halves cross at the middle of
- * the picture rather than at its bottom edge. Nothing has to travel a viewport,
- * which is why this is a fraction of one and not the whole thing — half a
- * screen of scroll is enough to read as deliberate and still land fast.
- */
-export const HANDOFF_VIEWPORTS = 0.5
+export const SCROLL_PAGES = STOP_COUNT + HANDOFF_VIEWPORTS
 
 /** Where on the hero's travel the camera animation ends and the handover begins. */
 export const HANDOFF_START = (SCROLL_PAGES - 1 - HANDOFF_VIEWPORTS) / (SCROLL_PAGES - 1)
@@ -59,8 +59,9 @@ export const HANDOFF_START = (SCROLL_PAGES - 1 - HANDOFF_VIEWPORTS) / (SCROLL_PA
  *
  * The geometry — the site pinned dead still under the scroll — stays welded to
  * the raw scroll position, because any lag there is visible as drift. Only the
- * dissolve is damped: a wheel notch that jumps 100px mid-handover moves the
- * reveal a step, and this eases across it. Higher = tighter to the scrollbar.
+ * camera's dive and the dissolve are damped: a wheel notch that jumps 100px
+ * mid-handover moves the reveal a step, and this eases across it. Higher =
+ * tighter to the scrollbar.
  */
 export const HANDOFF_SMOOTHING = 9
 

@@ -148,23 +148,23 @@ to a station), and the scroll cue.
 ### 5. The handover
 
 The scene ends and the website begins on one continuous scroll, with no jump cut
-and no dead frame in between — and it happens **at the centre of the picture,
-not at its bottom edge**. Nothing slides in. Everything is keyed to custom
-properties `useHeroScroll` writes onto the root element; no React render, no
-second scroll listener, no rAF loop except the one that damps the reveal:
+and no dead frame in between — and it is **a camera move**, not a wipe. Nothing
+slides in. Everything is keyed to custom properties `useHeroScroll` writes onto
+the root element (and the same damped number onto `rig.reveal` for the camera);
+no React render, no second scroll listener, no rAF loop except the one that
+damps the reveal. The handover is `HANDOFF_VIEWPORTS` (1.5) of scroll:
 
-1. **The camera holds.** The closing wide shot is the last stop, so the
-   camera is parked on it for the whole handover.
-2. **Paper opens out of the middle of that frame.** `.hero__curtain` is a disc,
-   not a sheet: a soft-edged radial gradient scaled up from the centre of the
-   screen. Scale is the one thing the compositor does without repainting, so the
-   flood costs nothing on the frames that need the budget most. The shot leans
-   in 4.5% underneath it, so it reads as receding rather than being wiped off,
-   and the story overlay is gone before the paper reaches the corners.
-3. **The site comes up through it, held dead still.** It grows in from 0.96 with
-   its transform origin on the centre of the screen — the same point the paper
-   is flooding out of — while the top bar arrives last, once the site is
-   already there.
+1. **The camera dives into the site.** From the closing wide shot, `dive()` in
+   `CameraRig` swoops down into the big screen on BUILD — the one showing a
+   mock of the site — on a Bézier whose last stretch comes in from in front and
+   above, clear of the crew's heads. It lands with the page filling the frame
+   (by 78% of the handover), then keeps pushing in. The station tags and the
+   story overlay clear out as it sets off. Under reduced motion the camera
+   holds on the wide shot instead.
+2. **The site comes up through the screen, held dead still.** It fades in only
+   once the camera has landed, growing from 0.96 with its transform origin on
+   the centre of the screen — the point the camera is pushing in on — while the
+   top bar arrives last, once the site is already there.
 
 The stillness is the part that takes the work. `<Site>` is pulled up over the
 hero's last viewport so that its first rule lands flush with the top of the
@@ -179,7 +179,7 @@ That is also why there are two numbers for one transition:
 | | |
 | --- | --- |
 | `--handoff` | Exact, welded to the scrollbar. Drives the geometry — the hold above. Damping *here* would show up as the site drifting, which is the thing we are getting rid of. |
-| `--reveal` | The same number, exponentially damped in a rAF loop. Drives the *look* — the flood, the fade, the growth. A 100px wheel notch steps `--handoff`; `--reveal` eases across it at 60fps, which is what makes a half-viewport handover read as smooth rather than as four hard steps. |
+| `--reveal` | The same number, exponentially damped in a rAF loop. Drives the *look* — the camera's dive, the fade, the growth. A 100px wheel notch steps `--handoff`; `--reveal` eases across it at 60fps, which is what makes the flight read as smooth rather than as a run of hard steps. |
 
 Both transforms come off the site the instant it owns the screen: a transform on
 `.paper` makes it the containing block for the fixed top bar, which is harmless

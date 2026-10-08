@@ -11,9 +11,9 @@ import { HANDOFF_VIEWPORTS, SCROLL_PAGES } from './config'
  *
  * The hero is a tall block with a pinned stage inside it: the process scene,
  * one viewport of scroll per stop, the camera flying station to station as the
- * page moves. After the closing wide shot, the frame opens from the middle —
- * the site's own ground floods out of the centre of the shot and the site comes
- * up through it, held dead still, never sliding.
+ * page moves. After the closing wide shot, the camera dives into the big screen
+ * on BUILD, which is showing the site, until the screen is the whole frame —
+ * and the real site comes up through it, held dead still, never sliding.
  */
 
 /**
@@ -25,7 +25,7 @@ import { HANDOFF_VIEWPORTS, SCROLL_PAGES } from './config'
  * What the handover length does control is how far the site would drift during
  * it, and that drift is exactly what `--handoff-travel` cancels: CSS holds the
  * site dead still at the top of the screen for the whole handover, so it comes
- * up out of the centre of the frame instead of sliding in from the bottom edge.
+ * up through the camera's last frame instead of sliding in from the bottom edge.
  */
 const OVERLAP_VH = 100
 const HANDOFF_TRAVEL_VH = HANDOFF_VIEWPORTS * 100
@@ -77,9 +77,6 @@ export default function App() {
         <div className="hero__stage">
           <Experience />
           <Story />
-
-          {/* The handover: the site's own ground floods out of the centre. */}
-          <div className="hero__curtain" aria-hidden="true" />
         </div>
 
         <SceneChrome />

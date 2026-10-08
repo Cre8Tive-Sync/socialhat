@@ -1,6 +1,6 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { COLORS } from '../stations'
+import { COLORS, SITE_SCREEN } from '../stations'
 import { Card, Pop, Tile } from '../props'
 import { codeTexture, tileTexture, websiteTexture } from '../textures'
 import { clamp01, rig, sinceArrival } from '../rig'
@@ -33,6 +33,14 @@ export function Build({ index }) {
   const screens = [useRef(null), useRef(null), useRef(null)]
   const typed = useRef(1)
 
+  const screen = useRef(null)
+  useEffect(() => {
+    rig.screen = screen.current
+    return () => {
+      if (rig.screen === screen.current) rig.screen = null
+    }
+  }, [])
+
   useFrame(() => {
     const t = sinceArrival(index)
     screens.forEach((ref, i) => {
@@ -51,9 +59,11 @@ export function Build({ index }) {
 
   return (
     <>
-      {/* The site, big, behind the desk. */}
+      {/* The site, big, behind the desk. The handover flies into it. */}
       <Pop station={index} delay={0.1} bob={0.025} position={[0.05, 1.78, -0.9]} rotation={[0.04, 0, 0]}>
-        <Card texture={site} width={1.36} height={0.85} glow={0.85} materialRef={screens[0]} />
+        <group ref={screen}>
+          <Card texture={site} width={SITE_SCREEN.width} height={SITE_SCREEN.height} glow={0.85} materialRef={screens[0]} />
+        </group>
       </Pop>
 
       {/* Editors either side, angled in. */}

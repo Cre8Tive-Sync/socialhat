@@ -7,7 +7,8 @@ import { STATIONS, STOPS } from './stations'
  * scroll scene wrote custom properties: it changes every frame, and nothing
  * about it should ever cause a render. Four parties share it —
  *
- *   useHeroScroll  writes `target`, the stop the scroll has asked for;
+ *   useHeroScroll  writes `target`, the stop the scroll has asked for, and
+ *                  `reveal`, how far into the handover it is;
  *   Director       springs `s` toward it in *time*, and works out what each
  *                  station is doing;
  *   CameraRig      flies the camera along the path at `s`;
@@ -42,6 +43,13 @@ export const rig = {
    * belong to those; in a close-up the copy names the station instead.
    */
   wide: 1,
+  /**
+   * 0→1 through the handover, damped — the same number as `--reveal`, written
+   * by useHeroScroll. The camera dives into `screen` on it.
+   */
+  reveal: 0,
+  /** BUILD's big screen, the one showing the site. The handover flies into it. */
+  screen: null,
 
   reducedMotion,
   /** `?cam`: orbit controls instead of the rig, for framing shots. */
