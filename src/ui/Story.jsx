@@ -1,125 +1,122 @@
 import { useLayoutEffect, useRef } from 'react'
-import { TIMELINE, beatPresence, drawStagger } from '../story'
-import { BeatIcon } from './Icons'
-import { LOGO_ALT, LOGO_SRC } from '../config'
+import { COPY, STATIONS } from '../three/stations'
+import { LAST_STOP, rig, smootherstep } from '../three/rig'
 
 /**
- * The narrative layer. Deliberately DOM text rather than geometry in the canvas:
- * headings and copy stay real, selectable, translatable and crawlable.
+ * The words over the process scene. DOM rather than geometry, so headings and
+ * copy stay real, selectable and crawlable.
  *
- * The type itself only ever crossfades. The one thing that animates is the icon
- * on each middle beat, which draws itself in as the beat arrives.
+ * Each block is present around the stops it belongs to and gone between them,
+ * keyed to the camera's own position (rig.s) rather than to raw scroll, so the
+ * copy lands with the shot it describes. The headline belongs to both wide
+ * shots — the scene opens and closes on it.
  *
- * Nothing here re-renders. One rAF loop reads the shared timeline position and
- * writes custom properties; CSS turns those into the choreography.
+ * Nothing here re-renders. One rAF loop writes `--p` per block; CSS does the
+ * rest.
  */
-export function Story({ timelineRef }) {
+
+/** How quickly a block clears as the camera leaves its stop, in stops. */
+const FALLOFF = 0.42
+
+const presence = (stops) =>
+  Math.max(...stops.map((stop) => smootherstep(1 - Math.abs(rig.s - stop) / FALLOFF)))
+
+const BLOCKS = [
+  { id: 'intro', stops: [0, LAST_STOP] },
+  ...STATIONS.map((station, i) => ({ id: station.id, stops: [i + 1] })),
+  { id: 'outro', stops: [LAST_STOP] },
+]
+
+export function Story() {
   const root = useRef(null)
 
-  // Layout effect, not effect: this has to land before the first paint, or the
-  // page shows one frame of the stacked fallback layout before the overlay
-  // takes over.
   useLayoutEffect(() => {
     const el = root.current
     if (!el) return
 
-    // Resolve the nodes once instead of querying the DOM every frame, and parse
-    // each stroke's stagger delay here rather than reading it back per frame.
-    const beats = TIMELINE.map((beat) => {
-      const node = el.querySelector(`[data-beat="${beat.id}"]`)
-      return {
-        beat,
-        node,
-        strokes: node
-          ? Array.from(node.querySelectorAll('[data-draw], [data-pop]')).map((element) => ({
-              element,
-              delay: Number(element.dataset.delay) || 0,
-            }))
-          : [],
-        last: -1,
-      }
-    }).filter((entry) => entry.node)
+    const blocks = BLOCKS.map((block) => ({
+      ...block,
+      node: el.querySelector(`[data-block="${block.id}"]`),
+      last: -1,
+    })).filter((block) => block.node)
 
-    const paint = (ms) => {
-      for (const entry of beats) {
-        const presence = beatPresence(entry.beat, ms)
-        // Skip the write entirely when nothing moved, which is most frames.
-        if (Math.abs(presence - entry.last) <= 0.0005) continue
-        entry.last = presence
-        entry.node.style.setProperty('--p', presence.toFixed(4))
-        for (const { element, delay } of entry.strokes) {
-          element.style.setProperty('--dp', drawStagger(presence, delay).toFixed(4))
-        }
+    // The close-ups put a neighbouring platform behind the station card, so the
+    // card brings a shade of the night in with it, down the left of the frame.
+    let lastScrim = -1
+
+    const paint = () => {
+      let scrim = 0
+      for (const block of blocks) {
+        const p = presence(block.stops)
+        if (block.id !== 'intro' && block.id !== 'outro') scrim = Math.max(scrim, p)
+        if (Math.abs(p - block.last) <= 0.0005) continue
+        block.last = p
+        block.node.style.setProperty('--p', p.toFixed(4))
+        block.node.style.visibility = p > 0.001 ? 'visible' : 'hidden'
+      }
+      if (Math.abs(scrim - lastScrim) > 0.0005) {
+        lastScrim = scrim
+        el.style.setProperty('--scrim', scrim.toFixed(4))
       }
     }
 
-    // Resolve the opening frame first, then hand the choreography to JS, so the
-    // overlay never paints with every beat at full opacity. Until data-live is
-    // set the beats render as a plain readable stack, which is what a crawler
-    // or a failed bundle is left with.
-    paint(timelineRef.current)
+    // Resolve the opening frame first, then hand over to the loop, so nothing
+    // paints with every block at full opacity. Until data-live is set the
+    // blocks render as a plain readable stack — what a crawler or a failed
+    // bundle is left with.
+    paint()
     el.dataset.live = 'true'
 
     let frame
     const tick = () => {
-      paint(timelineRef.current)
+      paint()
       frame = requestAnimationFrame(tick)
     }
-
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [timelineRef])
+  }, [])
+
+  const intro = COPY[0]
+  const outro = COPY[LAST_STOP]
 
   return (
     <main className="story" ref={root}>
-      {TIMELINE.map((beat) => (
-        <section
-          className="beat"
-          key={beat.id}
-          data-beat={beat.id}
-          data-centred={beat.centred ? 'true' : undefined}
-        >
-          <div
-            className="beat__inner"
-            style={
-              beat.place
-                ? { '--x': beat.place.x, '--y': beat.place.y, '--w': beat.place.w }
-                : undefined
-            }
-          >
-            {beat.icon && <BeatIcon name={beat.icon} />}
-            {beat.heading && <BeatHeading heading={beat.heading} />}
-            {beat.body && <p className="beat__body">{beat.body}</p>}
-            {beat.logo && (
-              <img
-                className="beat__logo"
-                src={LOGO_SRC}
-                alt={LOGO_ALT}
-                width="550"
-                height="276"
-                decoding="async"
-              />
-            )}
-          </div>
+      <div className="story__scrim" aria-hidden="true" />
+
+      <section className="block block--intro" data-block="intro">
+        <p className="block__kicker">
+          <span className="block__kicker-dot" aria-hidden="true" />
+          {intro.kicker}
+        </p>
+        <h1 className="block__headline">
+          <span className="block__line">{intro.lines[0]} </span>
+          <span className="block__line block__line--hot">{intro.lines[1]}</span>
+        </h1>
+        <p className="block__body">{intro.body}</p>
+      </section>
+
+      {STATIONS.map((station, i) => (
+        <section className="block block--station" data-block={station.id} key={station.id}>
+          <p className="block__number">{station.number}</p>
+          <h2 className="block__title">{station.label}</h2>
+          <p className="block__body">{COPY[i + 1].body}</p>
         </section>
       ))}
-    </main>
-  )
-}
 
-/**
- * The line breaks are authored, not left to the browser, so each heading lands
- * as the two-line shape it was written to be.
- */
-function BeatHeading({ heading }) {
-  const Tag = heading.tag
-  return (
-    <Tag className="beat__heading">
-      {heading.lines.map((line, i) => (
-        <span className="beat__line" key={i}>
-          {line}{' '}
-        </span>
-      ))}
-    </Tag>
+      <section className="block block--outro" data-block="outro" aria-label="What we do">
+        <p className="note">
+          {outro.note.map((word, i) => (
+            <span key={i} className="note__line">
+              {word}{' '}
+            </span>
+          ))}
+        </p>
+        <p className="stamp">
+          {outro.stamp.map((word) => (
+            <span key={word}>{word} </span>
+          ))}
+        </p>
+      </section>
+    </main>
   )
 }

@@ -1,46 +1,44 @@
 /* ==========================================================================
    Tokens
-   Two halves, two palettes. The film's neutrals come straight from the logo
-   artwork, so the type and the mark are the same family of ink. The site's
-   palette is declared on `.site` in site.css and shares exactly one value with
-   this file: the ground it arrives on, which the curtain below has to flood.
+   Two halves, two palettes that meet in the middle. The process scene is set
+   at night on an indigo ground with lime and hot pink as its only accents;
+   the site's palette is declared on `.site` in site.css and shares one value
+   with this file: the ground it arrives on, which the curtain below floods.
    ========================================================================== */
 
 :root {
-  --bg: #08080a;
+  --bg: #1c1644;
+  --night: #1c1644;
   --ink: #f2f2f3;
-  --ink-body: #e6dfd6;
-  --ink-faint: #a09689;
-  --ink-deep: #1d1f20;
-  --accent: #e8913c;
+  --ink-body: #ded8ef;
+  --ink-faint: #9c93c4;
+  --ink-deep: #17122f;
+  --lime: #c6f23a;
+  --pink: #ff3d5e;
+  --paper: #f1ece1;
 
-  /* The site's own ground, which is what the film dissolves into on the
-     handover. It is the one token that has to be the same on both sides of the
-     seam: the curtain floods this, and the site is painted in it, so the two
-     are indistinguishable by the time the site owns the screen. Kept in sync
-     with `--ink` on `.site` in site.css. */
+  /* The site's own ground, which is what the scene dissolves into on the
+     handover. Kept in sync with `--ink` on `.site` in site.css. */
   --site-ground: #150e38;
 
-  /* Tight to the glyphs rather than a wash across the picture: on the dark
-     room it is invisible, on the white sketch paper it is what separates the
-     white type from the sheet. Sized in em so it stays proportional from
-     84px display type down to body copy. */
-  --ink-shadow: 0 0.025em 0.05em rgb(8 8 10 / 0.85), 0 0.02em 0.3em rgb(8 8 10 / 0.5);
+  --ink-shadow: 0 0.02em 0.04em rgb(12 8 32 / 0.8), 0 0.02em 0.4em rgb(12 8 32 / 0.55);
 
   --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", system-ui, sans-serif;
+  --font-shout: Anton, Impact, "Arial Narrow", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
-  --gutter: clamp(1.5rem, 5vw, 5.5rem);
-  --floor: clamp(4.5rem, 9vh, 7rem);
+  --gutter: clamp(1.25rem, 4.4vw, 5rem);
+  --floor: clamp(3.5rem, 9vh, 6.5rem);
 
-  /* Layer order: canvas 0, story 5, curtain 6, chrome 10, loader 50. The site
-     is a sibling at 5 and stacks its own chrome inside that. */
+  /* Layer order: canvas 0 (labels inside it at 0–4), story 5, curtain 6,
+     chrome 10, loader 50. The site is a sibling at 5 and stacks its own
+     chrome inside that. */
   --z-story: 5;
 
-  /* Written by useHeroScroll. `--scene` is the camera animation, 0 to 1;
-     `--handoff` is the handover that follows it, exact and welded to the
+  /* Written by useHeroScroll. `--scene` runs 0 to 1 across the stops;
+     `--handoff` is the handover that follows, exact and welded to the
      scrollbar; `--reveal` is that same number damped, and is what every
-     dissolve on the page is actually keyed to. Declared here so the chrome has
-     sane values before the first scroll event lands. */
+     dissolve on the page is actually keyed to. */
   --scene: 0;
   --handoff: 0;
   --reveal: 0;
@@ -62,19 +60,25 @@ body {
   font-synthesis-weight: none;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
-  /* Every control on the page draws its own pressed state; the grey flash
-     mobile Safari and Chrome lay over a tapped link is a second one on top. */
   -webkit-tap-highlight-color: transparent;
-  /* Stops iOS inflating body copy on rotation to landscape. */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* ==========================================================================
    Hero
    A tall block with a pinned stage inside it. The stage holds the screen for
    the length of the block; when the block runs out it scrolls away and the
-   site underneath takes over. Nothing is fixed, so nothing has to be unfixed.
+   site underneath takes over.
    ========================================================================== */
 
 .hero {
@@ -95,28 +99,19 @@ body {
   display: block;
   width: 100%;
   height: 100%;
-  /* The frame leans in a touch as the paper opens over it, so the shot reads as
-     receding behind the site rather than being wiped off. Scaling up, never
-     down: down would open a rim of dark stage at the edges before the paper has
-     travelled far enough to cover it.
+}
 
-     Free, as it happens: the camera has nothing left to animate by now, so the
-     canvas is idle and this is the compositor stretching the last frame it
-     drew, not three.js re-rendering the scene at a new scale. */
+/* The canvas and the station tags drei positions over it lean in together as
+   the site's ground opens over them. Scaling up, never down: down would open
+   a rim of dark stage at the edges before the ground has covered it. */
+.hero__stage > div:first-child {
   transform: scale(calc(1 + 0.045 * var(--reveal)));
 }
 
-/* The handover. The camera has run out of animation and is holding its last
-   frame; scrolling on opens the site's own ground out of the middle of that
-   frame, and the film is gone by the time the masthead arrives.
-
-   A scaled disc, not a fading sheet: scale is the one thing the compositor can
-   do without repainting anything, so the flood holds frame rate on the frames
-   the site is being rastered on. The gradient does the softness — the
-   ink is flat out to 76% of the radius and falls off from there, so the edge is
-   a wash rather than an iris. At full scale that opaque core is 76vmax, which
-   clears the half-diagonal of any viewport (70.7vmax at the square worst case),
-   so the screen ends up completely covered. */
+/* The handover: the site's own ground floods out of the centre of the frame.
+   A scaled disc, because scale is the one thing the compositor can do without
+   repainting. Flat out to 76% of the radius, so at full scale it clears the
+   half-diagonal of any viewport. */
 .hero__curtain {
   position: absolute;
   left: 50%;
@@ -129,7 +124,6 @@ body {
     var(--site-ground) 0 76%,
     rgb(21 14 56 / 0) 100%
   );
-  /* Leads the site in: full coverage by the time the reveal is half done. */
   transform: translate(-50%, -50%) scale(calc(clamp(0, var(--reveal) * 2, 1) * 2));
   pointer-events: none;
 }
@@ -137,24 +131,34 @@ body {
 :root:not([data-phase="site"]) .hero__curtain { will-change: transform; }
 
 /* ==========================================================================
-   Story
+   Story — the copy over the scene
    Default state is a plain, fully visible, readable stack. The rAF loop sets
-   data-live and takes over, so a JS failure leaves legible copy behind
-   instead of four invisible sections.
-
-   The type does one thing: crossfade. No drift, no blur, no per-word reveal.
+   data-live and takes over, so a JS failure leaves legible copy behind.
    ========================================================================== */
 
 .story {
   position: relative;
   z-index: var(--z-story);
-  /* Goes with the picture, but ahead of it: the words are off the screen by
-     the time the paper reaches the corners, so the sign-off is never left
-     sitting on a blank sheet. */
   opacity: clamp(0, calc(1 - var(--reveal) * 2.4), 1);
 }
 
-.story:not([data-live="true"]) .beat { padding: 4rem var(--gutter); }
+.story:not([data-live="true"]) .block { padding: 3rem var(--gutter); }
+.story:not([data-live="true"]) .story__scrim { display: none; }
+
+/* Shade down the left of the frame while a station card is up, so the copy
+   never sits straight on a neighbouring platform. */
+.story__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgb(20 15 50 / 0.82) 0%,
+    rgb(20 15 50 / 0.55) 24%,
+    rgb(20 15 50 / 0) 46%
+  );
+  opacity: var(--scrim, 0);
+  pointer-events: none;
+}
 
 .story[data-live="true"] {
   position: absolute;
@@ -162,111 +166,187 @@ body {
   pointer-events: none;
 }
 
-.story[data-live="true"] .beat {
+.story[data-live="true"] .block {
   position: absolute;
-  inset: 0;
   opacity: var(--p, 1);
+  /* Settles up into place as it arrives, and keeps going as it leaves. */
+  transform: translateY(calc((1 - var(--p, 1)) * 1.25rem));
 }
 
-/* Placement per beat: x / y / w arrive as inline custom properties from
-   story.js, tuned against the composition of that shot. */
-.story[data-live="true"] .beat__inner {
-  position: absolute;
-  left: var(--x, 5%);
-  top: var(--y, 58%);
-  width: min(var(--w, 36rem), calc(100% - var(--gutter) * 2));
+/* --- Intro: the wide shot's headline, top left ---------------------------- */
+
+.story[data-live="true"] .block--intro {
+  left: var(--gutter);
+  top: clamp(5.5rem, 12vh, 8rem);
+  width: min(44rem, calc(100% - var(--gutter) * 2));
 }
 
-/* The sign-off centres in the viewport by flex, not by offsets, so the mark
-   sits dead centre at every size. */
-.story[data-live="true"] .beat[data-centred="true"] {
+.block__kicker {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: var(--gutter);
+  gap: 0.6rem;
+  margin: 0 0 1.1rem;
+  color: var(--lime);
+  font: 600 0.8125rem/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
-.story[data-live="true"] .beat[data-centred="true"] .beat__inner {
-  position: static;
-  width: auto;
-  max-width: 100%;
+.block__kicker-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  background: var(--lime);
 }
 
-/* ==========================================================================
-   Beat typography
-   ========================================================================== */
-
-.beat__heading {
+.block__headline {
   margin: 0;
-  color: var(--ink);
-  font-weight: 700;
-  font-size: clamp(1.85rem, 3.9vw, 2.875rem);
-  line-height: 0.94;
-  letter-spacing: -0.018em;
+  color: var(--paper);
+  font: 400 clamp(3rem, 5.4vw, 5.75rem)/0.92 var(--font-shout);
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
   text-shadow: var(--ink-shadow);
 }
 
-.beat[data-beat="hero"] .beat__heading {
-  font-size: clamp(2.75rem, 7vw, 5.25rem);
-  letter-spacing: -0.028em;
-}
+.block__line { display: block; }
+.block__line--hot { color: var(--pink); }
 
-.beat__line { display: block; }
-
-.beat__body {
-  margin: 1.1rem 0 0;
-  max-width: 52ch;
+.block__body {
+  margin: 1.4rem 0 0;
+  max-width: 38ch;
   color: var(--ink-body);
-  font-size: clamp(1.0625rem, 1.15vw, 1.25rem);
-  font-weight: 500;
-  line-height: 1.32;
-  letter-spacing: 0.008em;
+  font: 400 clamp(0.875rem, 0.95vw, 1rem)/1.6 var(--font-mono);
   text-shadow: var(--ink-shadow);
   text-wrap: pretty;
 }
 
-.beat[data-beat="hero"] .beat__body {
-  max-width: 42ch;
-  font-size: clamp(1.125rem, 1.35vw, 1.4rem);
+/* --- Stations: a card low on the left ------------------------------------ */
+
+.story[data-live="true"] .block--station {
+  left: var(--gutter);
+  bottom: var(--floor);
+  width: min(26rem, calc(100% - var(--gutter) * 2));
 }
 
-.beat__logo {
-  display: block;
-  width: min(58vw, 27rem);
-  height: auto;
+.block__number {
+  display: inline-grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  margin: 0 0 0.9rem;
+  border: 2px dashed var(--pink);
+  border-radius: 50%;
+  color: var(--paper);
+  font: 400 1rem/1 var(--font-shout);
 }
 
-/* --- Icons ---------------------------------------------------------------
-   The one thing on the page that animates. Each stroke is normalised to
-   pathLength 1, so --dp (written per stroke by the rAF loop) maps straight to
-   dashoffset and the mark draws itself in as the beat arrives. */
-
-.beat__icon {
-  display: block;
-  width: clamp(2.25rem, 2.9vw, 2.75rem);
-  height: auto;
-  margin: 0 0 1.15rem;
-  color: var(--ink);
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 1px 3px rgb(8 8 10 / 0.7));
+.block__title {
+  margin: 0;
+  color: var(--paper);
+  font: 400 clamp(3rem, 6vw, 5.5rem)/0.9 var(--font-shout);
+  text-transform: uppercase;
+  text-shadow: var(--ink-shadow);
 }
 
-.beat__icon [data-draw] {
-  stroke-dasharray: 1;
-  stroke-dashoffset: calc(1 - var(--dp, 1));
+.block--station .block__body { margin-top: 1rem; }
+
+/* --- Outro: the paper note and the stamp --------------------------------- */
+
+.story[data-live="true"] .block--outro {
+  right: calc(var(--gutter) + 2.5rem);
+  bottom: var(--floor);
+  display: flex;
+  align-items: flex-end;
+  gap: 2.5rem;
 }
 
-.beat__icon [data-pop] {
-  fill: currentColor;
-  stroke: none;
-  transform: scale(var(--dp, 1));
-  transform-box: fill-box;
-  transform-origin: center;
+.note {
+  position: relative;
+  margin: 0;
+  padding: 1.3rem 1.5rem 1.4rem;
+  width: 12rem;
+  background: var(--paper);
+  color: var(--ink-deep);
+  font: 700 1.2rem/1.05 var(--font-display);
+  text-transform: uppercase;
+  transform: rotate(-6deg);
+  box-shadow: 0 1.2rem 2.4rem rgb(8 5 24 / 0.5);
 }
+
+/* The strip of tape holding it to the frame. */
+.note::before {
+  content: "";
+  position: absolute;
+  top: -0.7rem;
+  left: 50%;
+  width: 5.5rem;
+  height: 1.4rem;
+  background: rgb(198 242 58 / 0.85);
+  transform: translateX(-50%) rotate(3deg);
+}
+
+.note__line { display: block; }
+
+.stamp {
+  margin: 0 0 1rem;
+  padding: 0.9rem 1.6rem;
+  border: 2px solid var(--lime);
+  border-radius: 50%;
+  color: var(--lime);
+  font: 700 1.05rem/1 var(--font-display);
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+  transform: rotate(-14deg);
+}
+
+.stamp span { display: block; }
+
+/* ==========================================================================
+   Station tags — positioned in 3D by drei's <Html>
+   `--pop` (0→1, overshooting) is written per frame from the station's build.
+   ========================================================================== */
+
+.tag {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  transform: scale(var(--pop, 0)) rotate(calc(-4deg - (1 - var(--pop, 0)) * 10deg));
+  transform-origin: 0% 100%;
+  opacity: clamp(0, calc(var(--pop, 0) * 3), 1);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.tag__num {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-top: -1.3rem;
+  border: 2px dashed var(--pink);
+  border-radius: 50%;
+  color: var(--paper);
+  font: 400 1rem/1 var(--font-shout);
+  text-shadow: var(--ink-shadow);
+}
+
+.tag__tape {
+  position: relative;
+  padding: 0.35rem 1.1rem 0.3rem;
+  background: var(--lime);
+  color: var(--ink-deep);
+  font: 400 clamp(1.4rem, 2.1vw, 2.15rem)/1 var(--font-shout);
+  text-transform: uppercase;
+  /* Torn ends. */
+  clip-path: polygon(0 6%, 3% 0, 97% 4%, 100% 0, 99% 94%, 96% 100%, 4% 96%, 1% 100%);
+  box-shadow: 0 0.5rem 1.2rem rgb(8 5 24 / 0.45);
+  transition: background-color 300ms ease;
+}
+
+.tag[data-lit="true"] .tag__tape { background: #d8ff52; }
 
 /* ==========================================================================
    Chrome
@@ -289,8 +369,7 @@ body {
 
 .loader__label {
   margin: 0;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  font: 600 0.75rem/1 var(--font-mono);
   letter-spacing: 0.28em;
   text-indent: 0.28em;
   text-transform: uppercase;
@@ -307,7 +386,7 @@ body {
 .loader__bar {
   width: 100%;
   height: 100%;
-  background: var(--ink);
+  background: var(--lime);
   transform-origin: left;
   transform: scaleX(0);
   transition: transform 200ms ease;
@@ -323,7 +402,7 @@ body {
   100% { transform: translateX(333%) scaleX(0.3); }
 }
 
-.loader__hint { margin: 0; font-size: 0.9375rem; color: var(--ink-body); }
+.loader__hint { margin: 0; font: 400 0.875rem/1 var(--font-mono); color: var(--ink-body); }
 
 .loader__item {
   margin: 0;
@@ -336,41 +415,148 @@ body {
   opacity: 0.7;
 }
 
-/* The film's own chrome, and only the film's: it clears the screen on the
-   handover so the site arrives without a scrub bar across its footer. */
+/* The scene's own chrome, and only the scene's: it clears the screen on the
+   handover so the site arrives with its own top bar and nothing else. */
 .scene-chrome {
   opacity: clamp(0, calc(1 - var(--reveal) * 3), 1);
   pointer-events: none;
 }
 
-/* Amber reads against both ends of this scene: the white sketch paper it opens
-   on and the dark room it travels through. */
-.scrubber {
+[data-phase="site"] .scene-chrome { visibility: hidden; }
+
+/* --- Top bar ------------------------------------------------------------- */
+
+.scene-bar {
   position: fixed;
-  bottom: 0;
+  top: 0;
   left: 0;
+  right: 0;
   z-index: 10;
-  width: 100%;
-  height: 3px;
-  background: rgb(29 31 32 / 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem var(--gutter);
+  border-bottom: 1px solid rgb(222 216 239 / 0.12);
 }
 
-.scrubber__fill {
-  width: 100%;
-  height: 100%;
-  background: var(--accent);
-  transform-origin: left;
-  transform: scaleX(var(--scene));
+.scene-bar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--paper);
+  font: 400 1.5rem/1 var(--font-shout);
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  text-transform: uppercase;
+  pointer-events: auto;
 }
 
-/* --- Scroll cue ----------------------------------------------------------
-   Set in dark ink, because the only thing it ever has to compete with is the
-   white sketch paper of the opening shot. It retires as soon as the visitor
-   has taken the hint — a couple of percent of the camera move is plenty. */
+.scene-bar__dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--pink);
+}
+
+.scene-bar__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1.3rem;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--ink-deep);
+  font: 600 0.75rem/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  text-transform: uppercase;
+  pointer-events: auto;
+  transition: transform 200ms ease, background-color 200ms ease;
+}
+
+.scene-bar__cta:hover { background: #d8ff52; transform: translateY(-1px); }
+
+.scene-bar a:focus-visible,
+.rail button:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 3px;
+}
+
+/* --- The 01–05 rail ------------------------------------------------------ */
+
+.rail {
+  position: fixed;
+  top: 50%;
+  right: calc(var(--gutter) * 0.6);
+  z-index: 10;
+  transform: translateY(-50%);
+}
+
+.rail ol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The line between numbers. */
+.rail li + li::before {
+  content: "";
+  display: block;
+  width: 1px;
+  height: 1.6rem;
+  margin: 0 auto;
+  background: rgb(222 216 239 / 0.35);
+}
+
+.rail button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0.45rem 0.3rem;
+  border: 0;
+  background: none;
+  color: var(--ink-faint);
+  font: 600 0.8125rem/1 var(--font-mono);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 250ms ease;
+}
+
+.rail button:hover { color: var(--paper); }
+
+/* The active station: lime, with a dot. */
+.rail button::after {
+  content: "";
+  position: absolute;
+  bottom: -0.35rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--lime);
+  transform: scale(0);
+  transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.rail[data-active="1"] li[data-n="1"] button,
+.rail[data-active="2"] li[data-n="2"] button,
+.rail[data-active="3"] li[data-n="3"] button,
+.rail[data-active="4"] li[data-n="4"] button,
+.rail[data-active="5"] li[data-n="5"] button { color: var(--lime); }
+
+.rail[data-active="1"] li[data-n="1"] button::after,
+.rail[data-active="2"] li[data-n="2"] button::after,
+.rail[data-active="3"] li[data-n="3"] button::after,
+.rail[data-active="4"] li[data-n="4"] button::after,
+.rail[data-active="5"] li[data-n="5"] button::after { transform: scale(1); }
+
+/* --- Scroll cue ---------------------------------------------------------- */
 
 .scroll-cue {
   position: fixed;
-  bottom: 1.75rem;
+  bottom: 1.5rem;
   left: 50%;
   z-index: 10;
   display: flex;
@@ -378,25 +564,24 @@ body {
   align-items: center;
   gap: 0.75rem;
   transform: translateX(-50%);
-  opacity: clamp(0, calc(1 - var(--scene) * 60), 1);
+  /* Retires once the visitor has left the opening shot. */
+  opacity: clamp(0, calc(1 - var(--scene) * 6), 1);
 }
 
 .scroll-cue__label {
-  color: var(--ink-deep);
-  font-size: 0.9375rem;
-  font-weight: 700;
-  letter-spacing: 0.36em;
-  text-indent: 0.36em;
+  color: var(--ink-body);
+  font: 600 0.75rem/1 var(--font-mono);
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
   text-transform: uppercase;
-  text-shadow: 0 1px 18px rgb(255 255 255 / 0.7);
 }
 
 .scroll-cue__track {
   position: relative;
-  width: 2px;
-  height: 4rem;
+  width: 1px;
+  height: 3.5rem;
   overflow: hidden;
-  background: rgb(29 31 32 / 0.2);
+  background: rgb(222 216 239 / 0.25);
 }
 
 .scroll-cue__spark {
@@ -404,7 +589,7 @@ body {
   left: 0;
   width: 100%;
   height: 42%;
-  background: var(--ink-deep);
+  background: var(--lime);
   animation: cue 1.9s cubic-bezier(0.7, 0, 0.3, 1) infinite;
 }
 
@@ -417,38 +602,45 @@ body {
    Responsive + motion preferences
    ========================================================================== */
 
-@media (max-width: 40rem) {
-  /* Raised on a phone to clear the scroll cue, which sits at the bottom centre
-     and, on a short screen, landed squarely on the opening paragraph. The cue
-     is 1.75rem off the floor plus a label and a 2.75rem track — about 6rem. */
-  :root { --floor: clamp(7rem, 15vh, 8.5rem); }
+@media (max-width: 48rem) {
+  :root { --floor: clamp(5.5rem, 12vh, 7rem); }
 
-  /* One column anchored low, where a thumb is not covering it and the scene
-     still has room to breathe. The per-beat placement is desktop composition;
-     on a phone there is only one sensible place for it. */
-  .story[data-live="true"] .beat__inner {
+  .story[data-live="true"] .block--intro { top: 5rem; }
+  .block__headline { font-size: clamp(2.75rem, 13vw, 4.5rem); }
+
+  .story[data-live="true"] .block--station {
     left: var(--gutter);
     right: var(--gutter);
-    top: auto;
     bottom: var(--floor);
     width: auto;
   }
 
-  .beat__body { max-width: none; }
-  .beat__logo { width: 72vw; }
-  .scroll-cue__track { height: 2.75rem; }
+  .block__title { font-size: clamp(2.5rem, 12vw, 3.5rem); }
+  .block__body { max-width: none; font-size: 0.8125rem; }
+
+  .story[data-live="true"] .block--outro {
+    left: var(--gutter);
+    right: var(--gutter);
+    justify-content: center;
+    gap: 1.25rem;
+  }
+
+  .note { width: 9.5rem; font-size: 0.95rem; padding: 1rem 1.1rem 1.1rem; }
+  .stamp { font-size: 0.75rem; padding: 0.6rem 0.9rem; }
+
+  /* The rail would crowd a phone screen; the card says which station this
+     is. The tags shrink to stay off one another in the wide shot. */
+  .rail { display: none; }
+  .tag__tape { font-size: 0.95rem; padding: 0.25rem 0.6rem 0.2rem; }
+  .tag__num { width: 1.55rem; height: 1.55rem; margin-top: -0.9rem; font-size: 0.7rem; }
+
+  .scene-bar { padding: 0.9rem var(--gutter); }
+  .scene-bar__cta { padding: 0.6rem 1rem; font-size: 0.6875rem; }
+  .scroll-cue__track { height: 2.5rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* The crossfade stays, because it is how the story is told. The drawing
-     does not: the icons are simply already finished. */
-  .beat__icon [data-draw] { stroke-dashoffset: 0; }
-  .beat__icon [data-pop] { transform: none; }
-
-  /* The handover keeps its timing and loses its travel: the ground stops
-     opening out of the centre and simply fades in flat, and the frame holds
-     still underneath it instead of leaning in. */
-  .hero__stage canvas { transform: none; }
+  .hero__stage > div:first-child { transform: none; }
 
   .hero__curtain {
     left: 0;
@@ -459,6 +651,10 @@ body {
     opacity: clamp(0, calc(var(--reveal) * 2), 1);
     transform: none;
   }
+
+  /* Tags fade rather than pop; the copy fades rather than rises. */
+  .tag { transform: rotate(-4deg); opacity: var(--pop, 0); }
+  .story[data-live="true"] .block { transform: none; }
 
   html { scroll-behavior: auto; }
   .loader__bar--indeterminate { animation: none; }

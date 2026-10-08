@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { HANDOFF_SMOOTHING, HANDOFF_START } from '../config'
+import { HANDOFF_SMOOTHING, HANDOFF_START, STOP_COMMIT, STOP_COUNT } from '../config'
+import { LAST_STOP, rig } from '../three/rig'
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v)
 
@@ -11,63 +12,79 @@ const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v)
 const LIVE_AT = 0.75
 
 /**
+ * The hero's geometry, shared with scrollToStop() below so the rail can jump
+ * to a stop without measuring anything itself. Written on resize only.
+ */
+const geometry = { top: 0, travel: 0 }
+
+/** Document scroll offset at which a stop sits exactly. STOP_COUNT is the site. */
+const stopY = (stop) =>
+  stop >= STOP_COUNT
+    ? geometry.top + geometry.travel
+    : geometry.top + (stop / LAST_STOP) * HANDOFF_START * geometry.travel
+
+const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+/** Scroll the page so the camera flies to `stop`. Used by the stop rail. */
+export function scrollToStop(stop) {
+  window.scrollTo({ top: stopY(stop), behavior: prefersReducedMotion() ? 'instant' : 'smooth' })
+}
+
+/**
+ * Which stop a scroll position is asking for, given the way it is moving.
+ *
+ * `pos` is the scroll as a float position along the stops. Going down, a stop
+ * is committed to once the scroll is STOP_COMMIT of the way into the gap toward
+ * it; going up, likewise in reverse. That is what makes a small nudge enough to
+ * send the camera on to the next station, while jitter at rest does nothing.
+ */
+const committed = (pos, dir) => {
+  if (dir > 0) return Math.ceil(pos - STOP_COMMIT)
+  if (dir < 0) return Math.floor(pos + STOP_COMMIT)
+  return Math.round(pos)
+}
+
+/**
  * Scroll, measured against the pinned hero rather than the whole document.
  *
- * The page is two things stacked: a film, then a website. Reading document
- * scroll would stretch the camera animation across the site's sections too, so
- * everything here is normalised to the hero element's own travel.
+ * The page is two things stacked: a process scene, then a website. Everything
+ * here is normalised to the hero element's own travel.
  *
- * Three numbers come out of it, all written straight onto the root element as
- * custom properties. None of them is React state: they update on every scroll
- * event, and re-rendering to drive a three.js value or an opacity would be pure
- * waste. The render loop reads `.current`; CSS does the rest.
+ * The scene does not scrub. Scroll position is turned into a *stop request*
+ * (rig.target) and the camera flies there on its own clock, so one gesture is
+ * one move from station to station however coarse or fast the wheel is. When
+ * scrolling comes to rest inside the hero, the page settles itself onto the
+ * stop it committed to, so the scrollbar and the picture always agree.
  *
- *   --scene   — 0 to 1 across the camera animation, reaching 1 at HANDOFF_START
- *               and holding there while the last frame sits on screen.
- *   --handoff — 0 until the animation finishes, then 0 to 1 across the handover.
- *               Exact, and welded to the scrollbar: this is the number that
- *               holds the site still under the scroll, and a damped value there
- *               would show up as the site drifting.
- *   --reveal  — the same 0 to 1, damped. This is the *look* of the handover —
- *               the paper flooding out of the centre, the site coming up
- *               through it — so it is smooth in time rather than as coarse as
- *               the wheel. A 100px wheel notch steps `--handoff`; `--reveal`
- *               eases across it at 60fps.
+ * Three numbers are written straight onto the root element as custom
+ * properties — none of them React state:
+ *
+ *   --scene   — 0 to 1 across the stops, reaching 1 at HANDOFF_START.
+ *   --handoff — 0 until the last stop, then 0 to 1 across the handover. Exact,
+ *               and welded to the scrollbar: it holds the site still under the
+ *               scroll, and a damped value there would show up as drift.
+ *   --reveal  — the same 0 to 1, damped. The *look* of the handover.
  *
  * `data-phase` on the root goes scene → handoff → site, which is what the two
- * sets of chrome key off: the film's retires, the site's arrives, and the site
- * drops its transform entirely once it owns the screen.
+ * sets of chrome key off.
  *
- * Everything below is written to cost as close to nothing as possible per
- * scroll event, because by the time the visitor is reading the website this
- * listener is still the thing running on every one of their scrolls:
- *
- *   - the hero's geometry is measured on resize, never per scroll, so reading
- *     scroll never forces a synchronous layout;
- *   - a custom property is only written when its value actually changed. A
- *     write to `:root` invalidates the style of every element that inherits it,
- *     which is the whole document — and once the site owns the screen all four
- *     of these values are pinned, so the scroll costs nothing at all.
+ * Per scroll event this stays close to free: geometry is measured on resize,
+ * never per scroll, and a custom property is only written when it changed.
  */
-export function useHeroScroll(heroRef, onSceneMove) {
+export function useHeroScroll(heroRef) {
   const progress = useRef(0)
   const handoff = useRef(0)
   const reveal = useRef(0)
-
-  // Kept in a ref so a caller passing an inline function can't re-subscribe the
-  // listeners on every render.
-  const wake = useRef(onSceneMove)
-  wake.current = onSceneMove
 
   useEffect(() => {
     const root = document.documentElement
     let frame = 0
     let last = 0
-    // First read of the session snaps rather than animates: a reload halfway
-    // down the page should arrive on the site, not play the handover at it.
     let primed = false
+    let lastY = window.scrollY
+    let dir = 0
+    let settleTimer = 0
 
-    // Last value actually written for each, so unchanged frames stay silent.
     const written = { '--scene': '', '--handoff': '', '--reveal': '' }
 
     const write = (property, value) => {
@@ -76,27 +93,16 @@ export function useHeroScroll(heroRef, onSceneMove) {
       root.style.setProperty(property, value)
     }
 
-    // Measured here, not in read(): offsetTop/offsetHeight are layout reads,
-    // and doing them next to a style write on every scroll event is the classic
-    // way to force a synchronous layout 60 times a second.
-    let heroTop = 0
-    let heroTravel = 0
-
     const measure = () => {
       const hero = heroRef.current
       if (!hero) return
-      heroTop = hero.offsetTop
-      heroTravel = hero.offsetHeight - window.innerHeight
+      geometry.top = hero.offsetTop
+      geometry.travel = hero.offsetHeight - window.innerHeight
     }
 
     const paint = () => write('--reveal', reveal.current.toFixed(4))
 
     const tick = (now) => {
-      // Floored at 0 because a rAF timestamp is the time the *frame* began,
-      // which can predate the performance.now() taken in the scroll handler
-      // that started this loop — a negative step would run the damping
-      // backwards. Ceilinged so a backgrounded tab doesn't resume with one
-      // enormous step.
       const dt = Math.min(Math.max((now - last) / 1000, 0), 1 / 20)
       last = now
 
@@ -108,41 +114,63 @@ export function useHeroScroll(heroRef, onSceneMove) {
       frame = reveal.current === target ? 0 : requestAnimationFrame(tick)
     }
 
+    /** Raw 0–1 through the hero's whole travel. */
+    const raw = () =>
+      geometry.travel > 0 ? clamp01((window.scrollY - geometry.top) / geometry.travel) : 0
+
+    /** The scroll as a float along the stops; LAST_STOP + 1 is the site. */
+    const position = () =>
+      handoff.current > 0 ? LAST_STOP + handoff.current : progress.current * LAST_STOP
+
+    /**
+     * Scrolling has stopped. If it stopped between two stops inside the hero,
+     * finish the move the gesture started. Past the hero this does nothing: the
+     * website scrolls freely.
+     */
+    const settle = () => {
+      settleTimer = 0
+      if (raw() >= 1) return
+      const y = stopY(committed(position(), dir))
+      if (Math.abs(window.scrollY - y) < 1.5) return
+      window.scrollTo({ top: y, behavior: prefersReducedMotion() ? 'instant' : 'smooth' })
+    }
+
     const read = () => {
       if (!heroRef.current) return
 
-      const raw = heroTravel > 0 ? clamp01((window.scrollY - heroTop) / heroTravel) : 0
-      const moved = progress.current
+      const y = window.scrollY
+      if (Math.abs(y - lastY) > 0.5) dir = Math.sign(y - lastY)
+      lastY = y
 
-      progress.current = clamp01(raw / HANDOFF_START)
-      handoff.current = clamp01((raw - HANDOFF_START) / (1 - HANDOFF_START))
+      const r = raw()
+      progress.current = clamp01(r / HANDOFF_START)
+      handoff.current = clamp01((r - HANDOFF_START) / (1 - HANDOFF_START))
+
+      rig.target = Math.min(committed(position(), dir), LAST_STOP)
 
       write('--scene', progress.current.toFixed(4))
       write('--handoff', handoff.current.toFixed(4))
 
-      // `site` only at a dead-exact 1, because that is the frame the site's
-      // hold-still transform is identity — anywhere earlier and dropping it
-      // would jump the page by whatever was left of the handover.
       const phase = handoff.current >= 1 ? 'site' : handoff.current > 0 ? 'handoff' : 'scene'
       if (root.dataset.phase !== phase) root.dataset.phase = phase
 
-      // Separately: whether the site takes clicks. It is fully opaque and held
-      // still well before the handover completes, and waiting for the exact
-      // `site` frame left the last stretch of it looking finished but dead —
-      // stop scrolling there and nothing on screen answered a click.
       const live = handoff.current >= LIVE_AT
       if ((root.dataset.live === '') !== live) {
         if (live) root.dataset.live = ''
         else delete root.dataset.live
       }
 
-      // Only when the camera actually has somewhere new to be. The scene is on
-      // demand: it renders when this says so and idles the rest of the time, so
-      // the website is never scrolling against a 60fps redraw of a still frame.
-      if (progress.current !== moved) wake.current?.()
+      // Browsers without `scrollend` get a debounce standing in for it.
+      if (!('onscrollend' in window)) {
+        clearTimeout(settleTimer)
+        settleTimer = setTimeout(settle, 160)
+      }
 
       if (!primed) {
         primed = true
+        // A reload partway down lands on the stop it was nearest, with the
+        // camera already there rather than flying in from the wide shot.
+        rig.s = rig.target
         reveal.current = handoff.current
         paint()
         return
@@ -162,13 +190,15 @@ export function useHeroScroll(heroRef, onSceneMove) {
     measure()
     read()
     window.addEventListener('scroll', read, { passive: true })
+    window.addEventListener('scrollend', settle)
     window.addEventListener('resize', remeasure)
-    // Late-arriving fonts and images can still move the hero's own top edge.
     window.addEventListener('load', remeasure)
     return () => {
       window.removeEventListener('scroll', read)
+      window.removeEventListener('scrollend', settle)
       window.removeEventListener('resize', remeasure)
       window.removeEventListener('load', remeasure)
+      clearTimeout(settleTimer)
       if (frame) cancelAnimationFrame(frame)
     }
   }, [heroRef])

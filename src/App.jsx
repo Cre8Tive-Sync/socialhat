@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { invalidate } from '@react-three/fiber'
 import { Experience } from './three/Experience'
 import { Story } from './ui/Story'
 import { Site } from './ui/Site'
@@ -10,12 +9,11 @@ import { HANDOFF_VIEWPORTS, SCROLL_PAGES } from './config'
 /**
  * Two acts on one page.
  *
- * The hero is a tall block with a pinned stage inside it: the camera scrubs
- * while it holds the screen. When the animation runs out, the last frame opens
- * from the middle — the site's own ground floods out of the centre of the shot
- * and the site comes up through it, held dead still, never sliding. The film
- * and the website cross at the centre of the picture, and what is left is the
- * actual site.
+ * The hero is a tall block with a pinned stage inside it: the process scene,
+ * one viewport of scroll per stop, the camera flying station to station as the
+ * page moves. After the closing wide shot, the frame opens from the middle —
+ * the site's own ground floods out of the centre of the shot and the site comes
+ * up through it, held dead still, never sliding.
  */
 
 /**
@@ -34,15 +32,9 @@ const HANDOFF_TRAVEL_VH = HANDOFF_VIEWPORTS * 100
 
 export default function App() {
   const hero = useRef(null)
-  // The canvas renders on demand. `invalidate` is how the scroll listener says
-  // the camera has somewhere new to be — and by not calling it once the film is
-  // over, it is also how the website gets a completely idle GPU to scroll on.
-  const { progress } = useHeroScroll(hero, invalidate)
-
-  // Position on the camera animation, in milliseconds. Written by the render
-  // loop inside the Canvas, read by the story overlay outside it — so the words
-  // are locked to the damped camera time rather than to raw scroll.
-  const timelineRef = useRef(0)
+  // Writes the stop the scroll is asking for onto the shared rig; the scene,
+  // the copy and the rail all read the camera's position back off it.
+  useHeroScroll(hero)
 
   // The pre-boot curtain in index.html has done its job: it held the screen from
   // the browser's first frame until this bundle parsed, so nobody watched a
@@ -60,7 +52,7 @@ export default function App() {
   // Arriving on a link to a section — /#enquiry, /#work, and every old
   // WordPress page, which redirects to one of these. The browser tries to jump
   // to the fragment while #root is still empty, finds nothing, and leaves the
-  // visitor at the top of a six-screen film. So the jump is made here, once the
+  // visitor at the top of the process scene. So the jump is made here, once the
   // sections exist, and instantly: `scroll-behavior: smooth` would play the
   // whole film past them on the way down.
   //
@@ -83,8 +75,8 @@ export default function App() {
       <div className="hero" ref={hero} style={{ height: `${SCROLL_PAGES * 100}vh` }}>
         {/* Pinned for the length of the block, then released. */}
         <div className="hero__stage">
-          <Experience progress={progress} timelineRef={timelineRef} />
-          <Story timelineRef={timelineRef} />
+          <Experience />
+          <Story />
 
           {/* The handover: the site's own ground floods out of the centre. */}
           <div className="hero__curtain" aria-hidden="true" />

@@ -1,18 +1,18 @@
 # socialhat
 
-Two acts on one page. First a React + three.js film: the page renders through
-the camera baked into `scene.gltf`, scrubs that camera's animation from the
-scroll position, and tells a four-beat story in DOM text keyed to the
-animation's own keyframes. Then, when the animation runs out and the visitor
-keeps scrolling, the film dissolves into the actual socialhat website — the
-agency site, in full, on the same scroll.
+Two acts on one page. First a React + three.js process scene: five dioramas —
+01 PLAN, 02 CREATE, 03 BUILD, 04 AMPLIFY, 05 DELIVER — laid out along a dashed
+route, which the camera visits one scroll at a time while each station's
+effects pop up around it. Then, after the closing wide shot, the scene
+dissolves into the actual socialhat website — the agency site, in full, on the
+same scroll.
 
 ```bash
 npm install
 npm run dev
 ```
 
-`predev` packs the model automatically the first time, so `npm run dev` is all
+`predev` builds the model automatically the first time, so `npm run dev` is all
 you need from a clean checkout.
 
 The assistant (§8) needs an OpenRouter key. Without one the site runs and the
@@ -32,148 +32,129 @@ $env:OPENROUTER_API_KEY = "sk-or-..."; npm run dev
 
 ## How it works
 
-### 1. The three.js scene
+### 1. The scene
 
 [src/three/Experience.jsx](src/three/Experience.jsx) mounts a react-three-fiber
 `<Canvas>` inside a `position: sticky` stage, which pins it for the length of
-the hero block and then lets it scroll away. There are no lights
-in the React tree: `scene.gltf` ships its own (3 point lights + a sun via
-`KHR_lights_punctual`), and `GLTFLoader` instantiates them for you.
+the hero block and then lets it scroll away. The canvas is `touch-action: pan-y`,
+so touch gestures fall through to the document and the page keeps scrolling.
 
-The canvas is `pointer-events: none` and `touch-action: pan-y`, so wheel and
-touch gestures fall through to the document and the page keeps scrolling.
+`socialhat.glb` is a Blender blockout: four platforms with their figures and
+props, no camera, no animation, no lights. Everything that makes it a scene is
+in code:
 
-### 2. The camera comes from the glTF
+- **Re-placed stations.** The export's platforms face every which way along a
+  line. [src/three/ProcessScene.jsx](src/three/ProcessScene.jsx) lifts each one
+  into its own group, turns it so its *front* — the whiteboard's face, the far
+  side of the desk from the screens — faces the viewer, and sets it down on a
+  diagonal that climbs away to the right. Every station then shares one local
+  frame (origin at the platform, front toward +Z), which is what its props and
+  close-up shot are written in. Where each one goes is data, in
+  [src/three/stations.js](src/three/stations.js).
+- **AMPLIFY is built from scratch.** The export stops at four platforms, so the
+  fourth station is a cloned slab and two cloned figures, dressed entirely in
+  code.
+- **Restyled materials.** Clay figures, indigo platforms, glowing lamp tubes;
+  rock slabs and lime/pink accents are added under each platform.
+- **Lighting.** A hemisphere, a warm key with soft shadows, a pink rim, and one
+  light per station that comes up when the camera is on it.
+- **Post.** Bloom (only emissives cross the threshold), vignette, ACES tone
+  mapping. Skipped on phones, along with shadows.
 
-[src/three/ScrollScene.jsx](src/three/ScrollScene.jsx#L24-L37) pulls
-`cameras[0]` off the loaded model and hands it to R3F with `set({ camera })`.
-The camera object stays parented inside the glTF scene graph, which is what
-lets the animation drive it.
+### 2. Scroll asks for a stop; the camera flies there
 
-- **`camera.manual = true`** stops R3F from overwriting `aspect`/`fov` on every
-  resize, because this file owns them instead.
-- **Framing is preserved on narrow viewports.** The camera was authored at a
-  1.49:1 aspect with a tight 22.9° vertical FOV. Stock three.js keeps the
-  vertical FOV fixed, so a phone in portrait would crop the sides off the
-  composition. Instead, when the viewport is narrower than authored, the
-  vertical FOV widens to hold the same *horizontal* slice in shot. Set
-  `PRESERVE_AUTHORED_FRAMING = false` in [src/config.js](src/config.js) for
-  stock behaviour.
+There are seven stops: the wide shot, the five stations, the wide shot again.
+The page gives each one a viewport of scroll, but **the camera does not scrub**.
 
-### 3. Scroll drives the animation
+[src/hooks/useHeroScroll.js](src/hooks/useHeroScroll.js) turns the scroll
+position into a *stop request*. Going down, a stop is committed to once the
+scroll is `STOP_COMMIT` (14%) of the way into the gap toward it. Going up,
+the same in reverse. So a single wheel notch, a short swipe or PageDown is
+enough to send the camera on, and jitter at rest does nothing. When scrolling
+comes to rest between stops, the page settles itself onto the stop it
+committed to (`scrollend`, with a debounce fallback), so the scrollbar and the
+picture always agree.
 
-The clip is `CameraAction`, 7.04s, animating the `Camera` node.
+[src/three/Director.jsx](src/three/Director.jsx) springs a float `s` toward that
+stop **in time**, on a critically damped spring (`FLIGHT_STIFFNESS`). One
+gesture is one flight of about a second, however coarse or fast the wheel. A
+fling across several stops chains through them.
+[src/three/CameraRig.jsx](src/three/CameraRig.jsx) flies the camera along
+Catmull-Rom splines through every stop's position and look-target, with `s` as
+the parameter, so a flight curves through the scene rather than cutting across
+it.
 
-Rather than *playing* it, the action is armed and then **paused**, and scroll
-position sets the playhead directly:
+All of this shares one mutable object, [src/three/rig.js](src/three/rig.js).
+Scroll writes it, the render loop and the DOM overlay read it, and nothing in
+it ever causes a React render.
 
-```js
-action.play()
-action.paused = true          // the mixer never advances time on its own
+**Narrow screens.** Phones fly a second set of shots (each stop's `portrait`):
+the wide shot looks down the line from behind PLAN, so the stations climb up
+the screen; close-ups centre the platform above the copy. Either set holds its
+authored horizontal framing on screens narrower than it was framed for.
 
-// every frame:
-action.time = scrollProgress * clip.duration
-mixer.update(0)               // re-evaluate at that time, don't advance the clock
-```
+**The canvas only runs while it is on screen.** `frameloop` is `always` while
+the scene owns the screen, since things bob, the route marches and the camera
+flies on its own clock. It is `never` once `data-phase` reaches `site`, so the
+website scrolls on an idle GPU.
 
-`mixer.update(0)` is the important part: a zero delta makes the mixer sample
-the tracks at whatever `action.time` you set without stepping the clock, so
-scrubbing is exact and fully reversible in both directions.
+### 3. The stations
 
-[src/hooks/useHeroScroll.js](src/hooks/useHeroScroll.js) measures scroll against
-the **hero block**, not the document — the site below it must not stretch the
-camera move — and returns the position as a **ref, not state**, because
-re-rendering React at 60fps to move a camera would be wasted work. The render
-loop reads `.current` inside `useFrame`, damps it with `THREE.MathUtils.damp`,
-and publishes the result in milliseconds so the story overlay rides the same
-clock as the camera.
+Each station has a `show` value (0→1) and an `arrivedAt` time, both kept by the
+Director:
 
-The animation is mapped to the first `HANDOFF_START` of that travel and holds
-its last frame after it. The rest is the handover, below.
+- **`show`** builds a station's dressing up. It is 1 on the wide shots, where
+  all five sit dressed like the reference frame, and on whichever station the
+  camera is at. Every prop pops in on its own slice of it (`<Pop delay>` in
+  [src/three/props.jsx](src/three/props.jsx)), which is the stagger. Flying on
+  clears the station behind and builds the one ahead.
+- **`arrivedAt`** is when the camera last landed there. One-shot effects play
+  from it, and also once during the intro build-up:
 
-**The canvas renders on demand, not on a loop.** `frameloop="demand"` means
-nothing is drawn unless something asks for a frame, and only two things ever do:
-the scroll listener, when the scroll has actually moved the camera somewhere
-new, and `useFrame` itself, for as long as the damping has not yet arrived
-(damping is asymptotic, so it snaps to the target inside 1e-4 — otherwise it
-would ask for frames forever). The consequence worth having is at the other end:
-once the film is over, the camera is clamped and nothing invalidates, so the
-entire website scrolls with the GPU idle instead of against a 60fps redraw of
-one held frame.
+| Station | On arrival |
+| --- | --- |
+| 01 PLAN | The whiteboard writes itself on (a canvas redrawn only while writing); sticky notes slap onto the board. |
+| 02 CREATE | Lamps strike up with a flicker, a flash fires; the REC light pulses and the clapper snaps. |
+| 03 BUILD | Floating screens power on, site mockup first; the code types itself in. |
+| 04 AMPLIFY | Posts fan out from a stack, a burst of hearts goes up; the megaphone pumps out rings. |
+| 05 DELIVER | Confetti goes up (instanced, placed analytically from the arrival time) and the team jumps. |
 
-The same listener is written to cost as close to nothing as possible per event.
-The hero's geometry is measured on resize rather than per scroll, so reading
-scroll never forces a synchronous layout, and each custom property is only
-written when its value actually changed — a write to `:root` invalidates the
-style of everything that inherits it, which is the whole document. Past the
-handover all four values are pinned, so scrolling the site costs nothing.
+Everything printed in the scene — the whiteboard, screens, posts, board — is
+drawn to canvases at runtime ([src/three/textures.js](src/three/textures.js)) in
+the site's own Anton and Plex Mono, so it costs no image bytes.
 
-### 4. The story layer
+The station tags (dashed number, lime tape) are DOM, positioned in 3D by
+drei's `<Html>`. They belong to the wide shots; in a close-up the copy names
+the station instead.
 
-[src/story.js](src/story.js) holds the beats; [src/ui/Story.jsx](src/ui/Story.jsx)
-renders them.
+### 4. The copy
 
-**The frame numbers are 24fps.** `scene.gltf`'s sampler keys sit exactly 1/24s
-apart and run frame 1 to 169 (169 / 24 = 7.0417s, the clip duration), so the
-ranges in the brief decode as frames and are converted to milliseconds in
-`story.js` via `frameToMs()`. If your source timeline was a different rate,
-change `FPS` there and everything re-derives.
+[src/ui/Story.jsx](src/ui/Story.jsx) renders the words as real DOM: the
+"Big ideas. Real output." headline over both wide shots, a card for each
+station low on the left, and the taped note and stamp on the closing shot.
+Each block's presence is keyed to the camera's position `s`, not to raw scroll,
+so the copy lands with the shot it describes. While a station card is up, a
+gradient scrim comes in down the left of the frame, so the copy never sits
+straight on a neighbouring platform.
 
-| Beat | Frames | Milliseconds | Scroll | Placement | Icon |
-| --- | --- | --- | --- | --- | --- |
-| `hero` | 0-4 | 0-167 | 0-7% | lower left | none |
-| `process` | 35-74 | 1458-3083 | 16-48% | upper left | research |
-| `evidence` | 90-110 | 3750-4583 | 48-70% | centre right | evidence |
-| `signoff` | 156-170 | 6500-7083 | 88-100% | centred | the logo |
+The copy lives in `COPY` in [src/three/stations.js](src/three/stations.js).
+One rAF loop writes `--p` per block; CSS does the rest.
 
-The listed range is the window where a beat sits at **full opacity**. The
-crossfade happens in the 8 frames on either side of it, so every frame you
-asked for is fully legible. `hero` starts at frame 0 and so has no room to fade
-in, which is what you want from a hero: already there when the page loads.
-`process` finishes fading out at 3417ms and `evidence` starts fading in at
-3417ms, so the handoff is seamless with zero overlap.
-
-**Placement is per beat, and tuned to what the camera is looking at.** Each beat
-carries `place: { x, y, w }` in `story.js`, positioning the block against the
-viewport so the copy sits in open space rather than across the figures in the
-scene. Those are desktop compositions; below 40rem everything collapses to one
-column anchored low, where a thumb is not covering it.
-
-**There are no scrims.** All type is white, and legibility comes from a
-`text-shadow` sized in `em` so it stays proportional from 84px display type down
-to body copy. It is tight to the glyphs rather than a wash across the picture:
-invisible against the dark room, and what separates the white type from the
-white sketch paper of the opening shot.
-
-**The type only crossfades.** No drift, no blur, no per-word reveal, no
-parallax. Beats fade in and out and nothing else moves.
-
-**The icons are the one thing that animates.** Beats 2 and 3 carry an authored
-SVG mark ([src/ui/Icons.jsx](src/ui/Icons.jsx)) that draws itself in as the beat
-arrives: a brief under a magnifier for the research beat, plotted results
-against an axis for the evidence beat. Both are real drawn paths on one
-consistent 2px stroke, no icon font and no emoji.
-
-Every stroke carries `pathLength="1"`, which normalises it to a length of 1 and
-lets the draw-on run straight off a 0-1 progress value with no measuring. A
-per-stroke `data-delay` staggers them, so each mark builds in the order someone
-would actually draw it. Under `prefers-reduced-motion` the icons are simply
-already finished.
-
-**Nothing in the overlay re-renders.** One rAF loop reads the shared timeline
-ref and writes custom properties; CSS turns those into the choreography.
+[src/ui/Overlay.jsx](src/ui/Overlay.jsx) carries the scene's own chrome: brand
+and "Start a project" across the top (which jumps straight to the form rather
+than flying past every station), the 01–05 rail down the right (click to fly
+to a station), and the scroll cue.
 
 ### 5. The handover
 
-The film ends and the website begins on one continuous scroll, with no jump cut
+The scene ends and the website begins on one continuous scroll, with no jump cut
 and no dead frame in between — and it happens **at the centre of the picture,
 not at its bottom edge**. Nothing slides in. Everything is keyed to custom
 properties `useHeroScroll` writes onto the root element; no React render, no
 second scroll listener, no rAF loop except the one that damps the reveal:
 
-1. **The camera holds.** Scrub progress is clamped at 1, so the last frame stays
-   on screen for the whole handover, and the canvas goes idle — it has nothing
-   left to draw (see §3).
+1. **The camera holds.** The closing wide shot is the last stop, so the
+   camera is parked on it for the whole handover.
 2. **Paper opens out of the middle of that frame.** `.hero__curtain` is a disc,
    not a sheet: a soft-edged radial gradient scaled up from the centre of the
    screen. Scale is the one thing the compositor does without repainting, so the
@@ -205,7 +186,7 @@ Both transforms come off the site the instant it owns the screen: a transform on
 while the two are pinned together and wrong the moment the page scrolls on.
 `data-phase` flips to `site` only at a dead-exact `--handoff` of 1, which is
 the one frame where dropping the transform costs nothing, because it is already
-identity. The film's own chrome (scrub bar, scroll cue) clears out on the same
+identity. The scene's own chrome (top bar, rail, scroll cue) clears out on the same
 pass, and the top bar becomes interactive.
 
 Under `prefers-reduced-motion: reduce` the hold stays — it is geometry, not
@@ -218,7 +199,7 @@ fades in flat, the frame holds still, the site does not grow.
 work, a schedule of five services, the track record, the client list, signage,
 the ask, the enquiry form and the footer. Plain semantic DOM throughout.
 
-It runs the palette upside down from the film. Everything is scoped to `.paper`
+It runs its own palette alongside the scene's. Everything is scoped to `.paper`
 in [src/ui/site.css](src/ui/site.css), where `--ink` is the dark mark and
 `--paper` is the ground — the exact inverse of the tokens above it — so the two
 halves can share one page without either one having to compromise. Rules and
@@ -407,7 +388,7 @@ quietly two months after setup.
   after `render()` — `createRoot().render()` *schedules* the work rather than
   performing it, so the next statement can run before a single node is in the
   document and would pull the curtain to expose an empty `#root`. Its colours
-  are the film's `--bg`/`--ink`, hard-coded, and have to stay in step with
+  are the scene's `--bg`/`--ink`, hard-coded, and have to stay in step with
   styles.css or the handover to the app's own loader flashes.
 
 **SEO.** The head had a real bug: `og:image` was `/images/socialhat-mark.jpg` —
@@ -511,95 +492,87 @@ files, so links to `/wp-content/uploads/…` keep working. The step-by-step is i
 
 | Setting | Where | Default | Effect |
 | --- | --- | --- | --- |
-| `SCROLL_PAGES` | config | `6` | Viewport-heights the pinned hero occupies. The tail of the last one is the handover, the rest carry the 7.04s clip. Higher = slower, more deliberate camera. |
-| `HANDOFF_VIEWPORTS` | config | `0.5` | Viewports of scroll the handover takes. `HANDOFF_START` and the distance the site is held against both derive from it, so it is safe to change on its own. Lower = faster. |
-| `HANDOFF_SMOOTHING` | config | `9` | Damping on `--reveal`, the look of the handover. Higher tracks the scrollbar more tightly; lower glides more. The geometry is never damped. |
-| `SCROLL_SMOOTHING` | config | `4` | Damping. Higher tracks the scrollbar more tightly; lower glides more. |
-| `PRESERVE_AUTHORED_FRAMING` | config | `true` | Widen FOV instead of cropping on narrow viewports. |
-| `LOGO_SRC` | config | `-dark.svg` | Sign-off mark. |
-| `FPS` | story | `24` | Frame rate the beat numbers are interpreted at. |
-| `FADE_FRAMES` | story | `8` | Crossfade length on either side of each beat. |
-| `BEATS[].place` | story | per beat | `{ x, y, w }` position of the copy block. |
-| `BEATS[].icon` | story | per beat | `research`, `evidence`, or omitted. |
+| `STOP_COUNT` | config | `7` | Camera stops. Must match `STOPS` in stations.js. `SCROLL_PAGES` derives from it: one viewport per stop. |
+| `STOP_COMMIT` | config | `0.14` | How far into the gap toward the next stop a scroll must go to commit to it. Lower = twitchier; higher = needs a bigger push. |
+| `FLIGHT_STIFFNESS` | config | `5` | Natural frequency of the camera's spring, rad/s. 5 lands a one-stop flight in about 1.1s. |
+| `HANDOFF_VIEWPORTS` | config | `0.5` | Viewports of scroll the handover takes. `HANDOFF_START` and the distance the site is held against both derive from it. |
+| `HANDOFF_SMOOTHING` | config | `9` | Damping on `--reveal`, the look of the handover. The geometry is never damped. |
+| `STATIONS[]` | stations.js | per station | `position`, `turn` (where each sits and how far it swings off square-on), `front` (which way the export's set is meant to be seen from). |
+| `STOPS[]` | stations.js | per stop | Camera `pos`, `target`, `fov`, plus `portrait` for phones. Close-ups come from `closeUp()`; pass a `tweak` to nudge one. |
+| `COPY[]` | stations.js | per stop | The words over each stop. |
+| `COLORS` | stations.js | | Scene palette. The DOM's lives in styles.css tokens. |
 
-**About the logo.** `socialhat_logo-dark.svg`, the `#1D1F20` near-black mark,
-lands on the bright surface the camera finishes on. The sign-off beat carries no
-scrim, so nothing darkens the plate behind it. The identical artwork in
-`#F2F2F3` is at `-light.svg` if the shot ever changes.
+**Framing a shot.** Open the page with `?cam` and the rig is swapped for orbit
+controls starting at the current stop. Every time a drag ends, the shot is
+logged to the console in `STOPS` shape, ready to paste. `?still` skips the
+intro build-up; `?view=x,y,z,tx,ty,tz,fov` pins the camera to one exact shot.
 
-**Want the animation to play through once on first scroll instead of
-scrubbing?** In `ScrollScene`, drop the `action.paused = true` line and replace
-the `useFrame` body with `mixer.update(delta)`, gated on a "has scrolled" flag.
+**Dressing a station.** Each station's props are a component in
+[src/three/platforms/](src/three/platforms/), written in the station's local
+frame (origin at the platform, front toward +Z). Wrap anything new in
+`<Pop station={index} delay={…}>` and it joins the cascade.
 
 ## Typography
 
-Barlow Condensed, self-hosted via `@fontsource`: latin subset, weights 400 /
-500 / 700 only, about 65KB of woff2 total. No CDN request, no render-blocking
-stylesheet. Three roles: 700 for display headings, 500 for body copy (one step
-up from regular, because light-on-dark condensed type needs it), 400 for micro
-labels. Headings run at `line-height: 0.94` and body at `1.32`, tight enough
-that the two sit in the same rhythm.
-
-The one contrast risk left is the hero, which is white type over the brightly
-lit sketch paper. The drop shadow is what carries it. If it reads thin on your
-screen, the options in order of least disruption are: deepen `--ink-shadow` in
-`src/styles.css`, move that beat somewhere darker via its `place` in
-`story.js`, or set it back in `--ink-deep`.
+Self-hosted via `@fontsource`, latin subset, only the weights in use. No CDN
+request, no render-blocking stylesheet. The scene shares the site's faces:
+Anton for the headline, station titles and tape labels; IBM Plex Mono for
+kickers, body copy and readouts; Barlow Condensed for the handwritten-feeling
+note and the whiteboard. Type over the scene is cream on indigo, kept legible
+by an `em`-sized `--ink-shadow` and, behind the station cards, the scrim.
 
 ## The model
 
-`scene.gltf` (82 MB) stores its geometry buffer and all 13 textures as base64
-data URIs. That inflates the bytes ~33% and forces the browser to parse one
-enormous JSON string and `atob()` it before anything can render.
+`socialhat.glb` (61 MB) is the Blender export, and the source of truth. It is
+committed and never modified. Everything built from it is generated and
+gitignored.
 
-`npm run pack-model` runs three steps. `scene.gltf` is untouched throughout and
-remains the source of truth; everything below it is generated and gitignored.
+`npm run pack-model` runs two steps:
 
-1. [scripts/gltf-to-glb.mjs](scripts/gltf-to-glb.mjs) (zero dependencies)
-   repacks it into `public/models/scene.glb` — **82 MB to 61.6 MB**, the same
-   bytes stored raw instead of base64.
-2. [scripts/draco-compress.mjs](scripts/draco-compress.mjs) Draco-compresses the
-   geometry in place — **61.6 MB to 10.7 MB**, a 5.8x reduction.
-3. [scripts/copy-draco-decoder.mjs](scripts/copy-draco-decoder.mjs) copies
+1. [scripts/optimize-model.mjs](scripts/optimize-model.mjs) writes
+   `public/models/socialhat.glb` — **762k triangles to 134k, 61 MB to 3.4 MB.**
+   Almost all of the export's weight is eight sculpted figures at 90–110k
+   triangles each. They come out flat-shaded, every triangle carrying its own
+   three vertices, so no edge is shared and nothing can be simplified.
+   The script drops their normals so `weld()` can stitch each one back into a
+   single surface, simplifies to 10% with meshoptimizer, and regenerates
+   smooth normals, which is also the soft clay look the scene wants. Everything
+   else passes through as authored. Then the whole file is Draco-encoded.
+2. [scripts/copy-draco-decoder.mjs](scripts/copy-draco-decoder.mjs) copies
    three's decoder into `public/draco/`, so the browser has something to decode
    with.
-
-Draco earns its keep here because geometry and index data are ~88% of the file
-(46.1 MB and 7.8 MB against 7.6 MB of texture). It only compresses geometry —
-the textures pass through untouched, and are now the largest thing left.
-
-The encode drops ~2000 degenerate zero-area triangles and moves vertices by at
-most 0.003% of each mesh's bounding box, under the 0.0061% step that 14-bit
-quantisation implies. Total surface area is unchanged. There are no skins and no
-morph targets, which is where Draco quantisation normally causes visible
-trouble, and the camera animation is 3 channels that Draco does not touch.
 
 The decoder is copied out of `three` rather than loaded from drei's default
 gstatic CDN, so its version cannot drift from the `three` we build against and
 first paint does not depend on a third party. `DRACO_DECODER_PATH` in
-`src/config.js` is passed to both `useGLTF` and `useGLTF.preload` in
-`ScrollScene` — they have to match, because drei keys its cache on the URL alone.
+`src/config.js` is passed to both `useGLTF` and `useGLTF.preload` — they have to
+match, because drei keys its cache on the URL alone.
 
-If you need it smaller still, the textures are the remaining target, and that
-means KTX2/Basis rather than Draco.
+Re-exporting from Blender: keep the node names in `STATIONS[].nodes`, overwrite
+`socialhat.glb`, and `npm run dev` rebuilds it (the build is skipped while the
+output is newer than the source).
 
 ## Layout
 
 ```
-scene.gltf                     source model (untouched)
-scripts/gltf-to-glb.mjs        .gltf + base64 -> binary .glb packer
-scripts/draco-compress.mjs     Draco geometry compression, in place
-scripts/copy-draco-decoder.mjs three's Draco decoder -> public/draco/
-public/models/scene.glb        generated, gitignored
-public/draco/                  generated, gitignored
-public/images/                 logo, dark + light
-src/config.js                  scroll, camera and logo tunables
-src/story.js                   beat copy, frame ranges, placement, fade curves
-src/hooks/useScrollProgress.js scroll position as a ref
-src/three/Experience.jsx       the Canvas
-src/three/ScrollScene.jsx      model + camera swap + scroll scrub
-src/ui/Story.jsx               the four narrative beats
-src/ui/Icons.jsx               authored SVG marks for beats 2 and 3
-src/ui/Overlay.jsx             loading curtain, scrub bar, scroll cue
-src/styles.css                 tokens, type system, beat choreography
+socialhat.glb                     source model (Blender export, untouched)
+scripts/optimize-model.mjs        simplify figures + Draco -> public/models/
+scripts/copy-draco-decoder.mjs    three's Draco decoder -> public/draco/
+public/models/socialhat.glb       generated, gitignored
+public/draco/                     generated, gitignored
+src/config.js                     scroll, stop and handover tunables
+src/hooks/useHeroScroll.js        scroll -> stop request, settle, handover vars
+src/three/stations.js             stations, camera stops, copy, palette
+src/three/rig.js                  the shared clock everything reads
+src/three/Director.jsx            camera spring + station show/arrival state
+src/three/CameraRig.jsx           spline flight, portrait shots, ?cam
+src/three/ProcessScene.jsx        model load, restyle, re-placing, lights
+src/three/platforms/*.jsx         each station's props and effects
+src/three/props.jsx               Pop, Card, Tile, tags, focus lights, rock
+src/three/textures.js             canvas-drawn screens, boards, posts, tiles
+src/three/Path.jsx                the dashed route and floor marks
+src/three/Experience.jsx          the Canvas, post-processing
+src/ui/Story.jsx                  copy over each stop
+src/ui/Overlay.jsx                loading curtain, top bar, rail, scroll cue
+src/styles.css                    tokens, copy, tags, chrome
 ```
