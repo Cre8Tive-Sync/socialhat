@@ -90,13 +90,13 @@ const WORK = [
   },
   {
     id: 'sandvik',
-    client: 'Sandvic',
+    client: 'Sandvik',
     title: 'Social Media Video Campaign | Photos',
     kinds: ['video', 'social'],
     youtube: 'wAZGeZYa2rE',
     image: still('sandvik'),
     copy:
-      'Sandvic chose SocialHat to film various promotional videos of large equipment transported from Perth. These videos were created in line with brand guidelines, with the purpose to use as promotional marketing material through various social media channels.',
+      'Sandvik chose SocialHat to film various promotional videos of large equipment transported from Perth. These videos were created in line with brand guidelines, with the purpose to use as promotional marketing material through various social media channels.',
   },
   {
     id: 'lhre',
