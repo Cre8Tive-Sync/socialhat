@@ -54,14 +54,24 @@ confirm box.
 The summary should now read `public_html (live): new site` and
 `public_html.wordpress: WordPress`.
 
-### 4. Clear SiteGround's cache
+### 4. Confirm the cache was cleared
 
-Site Tools → Speed → Caching → Flush Cache. Without this, some visitors keep
-being served the old pages for a while.
+SiteGround keeps its own copy of pages and goes on serving it after the files
+change. Left alone, visitors are handed the old home page with its styling
+broken while everything looks fine to anyone who bypasses the cache. This
+happened on the first go-live.
+
+**go-live** and **rollback** now clear it for you. Check the run summary says
+`Cache purged.` If it says `CACHE NOT PURGED` or `CACHE PURGE FAILED`, clear
+it by hand: Site Tools → Speed → Caching → Flush Cache.
+
+If a stale page turns up later, the **purge** action does the same thing on its
+own.
 
 ### 5. Check it, in a private browser window
 
-- [ ] https://socialhat.com.au loads the new site, on a phone as well.
+- [ ] https://socialhat.com.au loads the new site, on a phone as well. Use a
+      private window: your own browser may still be holding the old page.
 - [ ] https://socialhat.com.au/contact-us/ lands on the enquiry form.
 - [ ] HatBot answers a question.
 - [ ] An enquiry sent through the form arrives in `info@`. Ask Tam to look in
@@ -77,8 +87,8 @@ Search Console → Sitemaps → submit `https://socialhat.com.au/sitemap.xml`.
 
 ## If something is wrong
 
-Run workflow → action **rollback** → type `socialhat.com.au`. Then flush the
-cache again (step 4). WordPress is back exactly as it was, because its database
+Run workflow → action **rollback** → type `socialhat.com.au`. It clears the cache
+as well; check the summary says so (step 4). WordPress is back exactly as it was, because its database
 was never touched. The new site is kept beside it, and **go-live** puts it back
 once the problem is fixed.
 
