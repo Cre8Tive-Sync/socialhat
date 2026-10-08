@@ -5,6 +5,7 @@
 #   release.sh status   <site-dir>    what is live, what is waiting, what can be restored
 #   release.sh go-live  <site-dir>    swap release-next/ in as public_html/
 #   release.sh rollback <site-dir>    put the previous public_html/ back
+#   release.sh purge    <site-dir>    clear SiteGround's page cache for the site
 #
 # <site-dir> is relative to $HOME, e.g. www/socialhat.com.au. It is run over SSH
 # by .github/workflows/deploy-production.yml, which first uploads the build to
@@ -21,7 +22,7 @@ set -euo pipefail
 
 ACTION=${1:-}
 SITE=${2:-}
-[ -n "$ACTION" ] && [ -n "$SITE" ] || { echo "usage: release.sh <status|go-live|rollback> <site-dir>" >&2; exit 2; }
+[ -n "$ACTION" ] && [ -n "$SITE" ] || { echo "usage: release.sh <status|go-live|rollback|purge> <site-dir>" >&2; exit 2; }
 
 cd "$HOME/$SITE" || { echo "No such site directory: $HOME/$SITE" >&2; exit 1; }
 
@@ -49,9 +50,48 @@ status() {
   echo "private/secrets.php:  $([ -f private/secrets.php ] && echo present || echo MISSING)"
 }
 
+#
+# SiteGround keeps its own copy of pages it has served, and goes on serving it
+# after the files underneath have changed. On the first go-live that meant
+# ordinary visitors were still handed the WordPress home page — now pointing at
+# stylesheets that had just stopped existing — while anyone bypassing the cache
+# saw the new site. So every swap is followed by a purge.
+#
+# The purge is done through SiteGround's own WordPress plugin, because that is
+# the route SiteGround authorises: a PURGE request sent directly is refused.
+# Any copy of the WordPress site will do, live or set aside. Once that copy has
+# been deleted there is nothing to run it through, and the answer is the Flush
+# Cache button in Site Tools -> Speed -> Caching, which this then says plainly.
+#
+# Never fatal. By the time this runs the swap has happened; a purge that fails
+# must not report the release as failed.
+purge_cache() {
+  local wp_dir=""
+  for candidate in "$LIVE" "$WORDPRESS"; do
+    if [ -f "$candidate/wp-config.php" ] && [ -d "$candidate/wp-content/plugins/sg-cachepress" ]; then
+      wp_dir=$candidate
+      break
+    fi
+  done
+  if [ -z "$wp_dir" ] || ! command -v wp >/dev/null 2>&1; then
+    echo "CACHE NOT PURGED: no WordPress copy with SiteGround's plugin to run it through."
+    echo "Flush it by hand: Site Tools -> Speed -> Caching -> Flush Cache."
+    return 0
+  fi
+  if timeout 90 wp --path="$PWD/$wp_dir" sg purge 2>&1 | sed 's/^/cache: /'; then
+    echo "Cache purged."
+  else
+    echo "CACHE PURGE FAILED. Flush it by hand: Site Tools -> Speed -> Caching -> Flush Cache."
+  fi
+}
+
 case "$ACTION" in
   status)
     status
+    ;;
+
+  purge)
+    purge_cache
     ;;
 
   go-live)
@@ -91,6 +131,7 @@ case "$ACTION" in
     mv "$NEXT" "$LIVE" || { mv "$ASIDE" "$LIVE"; die "Could not move $NEXT into place. The previous site has been restored."; }
 
     echo "LIVE. The site that was live is kept at $SITE/$ASIDE."
+    purge_cache
     status
     ;;
 
@@ -106,6 +147,7 @@ case "$ACTION" in
     mv "$BACK" "$LIVE" || { mv "$NEXT" "$LIVE"; die "Could not restore $BACK. The current site has been left in place."; }
 
     echo "ROLLED BACK to $BACK. The site that was live is kept at $SITE/$NEXT; 'go-live' puts it back."
+    purge_cache
     status
     ;;
 

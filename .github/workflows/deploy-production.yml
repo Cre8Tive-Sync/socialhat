@@ -9,6 +9,8 @@ name: Production (socialhat.com.au)
 #   go-live   Swaps release-next/ in as public_html/. The site that was live is
 #             kept, whole, beside it. Needs `confirm`.
 #   rollback  Puts the previous site back. Needs `confirm`.
+#   purge     Clears SiteGround's page cache. go-live and rollback already do
+#             this; it is here for when a stale page turns up anyway.
 #
 # The swap itself is server/release.sh, which this pipes over SSH — the logic
 # lives there, where it can be read and tested on its own.
@@ -23,7 +25,7 @@ on:
       action:
         description: What to do
         type: choice
-        options: [status, prepare, go-live, rollback]
+        options: [status, prepare, go-live, rollback, purge]
         default: status
       confirm:
         description: For go-live and rollback, type the domain — socialhat.com.au
