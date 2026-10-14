@@ -278,7 +278,7 @@ export function websiteTexture() {
     ctx.fill()
     ctx.fillStyle = COLORS.ink
     ctx.font = MONO(17, 600)
-    ctx.fillText('START A PROJECT', 66, 492)
+    ctx.fillText('GET A QUOTE', 86, 492)
 
     // Hero image: a figure on a peak against a violet sky.
     const gx = 600

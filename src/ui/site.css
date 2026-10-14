@@ -285,7 +285,7 @@
 
 /* Scoped one level deeper than `.site .btn` below, which is the rule it has to
    out-weigh to stay hidden on a narrow screen. */
-.site .topbar .nav-cta { display: none; }
+.site .topbar .nav-cta { display: none; gap: 10px; }
 
 @media (min-width: 860px) {
   .site .topbar .nav-cta { display: inline-flex; }
@@ -433,7 +433,7 @@
   letter-spacing: 0.1em;
 }
 
-.site .menu-cta { margin-top: 30px; }
+.site .menu-cta { display: flex; flex-direction: column; gap: 12px; margin-top: 30px; }
 .site .menu-cta .btn { width: 100%; justify-content: center; }
 
 /* `auto` so it settles on the bottom edge of a tall screen and simply follows

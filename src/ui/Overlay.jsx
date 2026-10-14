@@ -89,7 +89,7 @@ export function SceneChrome() {
           SocialHat
         </a>
         <a className="scene-bar__cta" href="#enquiry" onClick={toEnquiry}>
-          Start a project <span aria-hidden="true">→</span>
+          Get a Quote <span aria-hidden="true">→</span>
         </a>
       </header>
 
