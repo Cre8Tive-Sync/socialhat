@@ -266,6 +266,9 @@ const NAV = [
   ['Contact', '#contact'],
 ]
 
+/** The bar's own row. Contact is left out because the Contact Us button sits beside it. */
+const ROW = NAV.filter(([, href]) => href !== '#contact')
+
 /** Where the CTA and the contact block sit in the menu's stagger. */
 const STAGGER_CTA = NAV.length + 1
 const STAGGER_FOOT = NAV.length + 2
@@ -349,16 +352,21 @@ function Topbar({ awake }) {
           <Logo greet={awake} />
           <nav aria-label="Primary">
             <ul className="nav-links">
-              {NAV.map(([label, href]) => (
+              {ROW.map(([label, href]) => (
                 <li key={href}>
                   <a href={href}>{label}</a>
                 </li>
               ))}
             </ul>
           </nav>
-          <a className="btn nav-cta" href="#contact" onClick={burstFrom} {...MAGNETIC}>
-            Start a project
-          </a>
+          <div className="nav-cta">
+            <a className="btn outline" href="#contact" onClick={burstFrom} {...MAGNETIC}>
+              Contact Us
+            </a>
+            <a className="btn" href="#enquiry" onClick={burstFrom} {...MAGNETIC}>
+              Get a Quote
+            </a>
+          </div>
           <button
             className="burger"
             type="button"
@@ -408,13 +416,23 @@ function Topbar({ awake }) {
         <div className="menu-cta menu-stagger" style={{ '--i': STAGGER_CTA }}>
           <a
             className="btn"
+            href="#enquiry"
+            onClick={(event) => {
+              burstFrom(event)
+              setOpen(false)
+            }}
+          >
+            Get a Quote
+          </a>
+          <a
+            className="btn outline"
             href="#contact"
             onClick={(event) => {
               burstFrom(event)
               setOpen(false)
             }}
           >
-            Start a project
+            Contact Us
           </a>
         </div>
 
@@ -503,7 +521,7 @@ function Masthead({ awake }) {
     <section className="masthead">
       <div className="wrap masthead-inner">
         <p className="eyebrow" style={{ '--chip': 'var(--lime)' }}>
-          Perth digital marketing &amp; content agency
+          Aussie agency in Perth, WA
         </p>
 
         <h1 ref={heading} data-reveal>
@@ -515,12 +533,16 @@ function Masthead({ awake }) {
 
         <p className="masthead-sub" data-reveal>
           We build the sites, the ads, the videos and the screens that make people put their thumb
-          down. Fifteen plus years turning WA businesses into brands people actually notice.
+          down. Fifteen plus years turning homegrown brands across Australia into brands people
+          actually notice.
         </p>
 
         <div className="masthead-actions" data-reveal>
-          <a className="btn" href="#contact" onClick={burstFrom} {...MAGNETIC}>
-            Start a project
+          <a className="btn" href="#enquiry" onClick={burstFrom} {...MAGNETIC}>
+            Get a Quote
+          </a>
+          <a className="btn outline" href="#contact" onClick={burstFrom} {...MAGNETIC}>
+            Contact Us
           </a>
           <a className="btn outline" href="#services" {...MAGNETIC}>
             See what we do

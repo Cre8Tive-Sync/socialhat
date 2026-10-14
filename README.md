@@ -141,7 +141,7 @@ The copy lives in `COPY` in [src/three/stations.js](src/three/stations.js).
 One rAF loop writes `--p` per block; CSS does the rest.
 
 [src/ui/Overlay.jsx](src/ui/Overlay.jsx) carries the scene's own chrome: brand
-and "Start a project" across the top (which jumps straight to the form rather
+and "Get a Quote" across the top (which jumps straight to the form rather
 than flying past every station), the 01–05 rail down the right (click to fly
 to a station), and the scroll cue.
 
